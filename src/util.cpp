@@ -79,6 +79,17 @@ void Util::ParseArgs(int argc,
       },
       "");
 
+  auto is_zmq_available = CLI::Validator(
+      [](std::string input) -> std::string {
+#if USE_ZMQ
+        return std::string();
+#else
+        return "Not available because your device does not have this "
+               "feature.";
+#endif
+      },
+      "");
+
   auto is_valid_resolution = CLI::Validator(
       [](std::string input) -> std::string {
         if (input == "QVGA" || input == "VGA" || input == "HD" ||
@@ -150,6 +161,9 @@ void Util::ParseArgs(int argc,
   app.add_flag("--use-sdl", args.use_sdl,
                "Show video using SDL (if SDL is available)")
       ->check(is_sdl_available);
+  app.add_flag("--use-zmq", args.use_zmq,
+               "Show video using ZeroMQ (if ZeroMQ is available and SDL is not enabled)")
+      ->check(is_zmq_available);
   app.add_flag("--show-me", args.show_me,
                "Show self video (if SDL is available)")
       ->check(is_sdl_available);
