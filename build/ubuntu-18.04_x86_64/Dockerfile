@@ -133,3 +133,28 @@ RUN set -ex \
   && add-apt-repository "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /" \
   && apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get -y install cuda=$CUDA_VERSION clang-10
+
+# zmqpp のビルド
+
+RUN --mount=type=cache,id=$PACKAGE_NAME,target=/var/cache/apt --mount=type=cache,id=$PACKAGE_NAME,target=/var/lib/apt \
+  apt-get install -yq --no-install-recommends libzmq3-dev 
+
+ARG ZMQPP_VERSION
+COPY script/setup_zmqpp.sh /root/
+RUN \
+  set -ex \
+  && /root/setup_zmqpp.sh "${ZMQPP_VERSION}" /root/zmqpp-source \
+  && mkdir -p /root/zmqpp-source/build \
+  && cd  /root/zmqpp-source/build \
+  && CXXFLAGS="-D_LIBCPP_ABI_UNSTABLE -nostdinc++ -isystem/root/llvm/libcxx/include" \
+     cmake \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/root/zmqpp \
+      -DCMAKE_C_COMPILER=/root/llvm/clang/bin/clang \
+      -DCMAKE_CXX_COMPILER=/root/llvm/clang/bin/clang++ \
+      -DCMAKE_CXX_STANDARD=14 \
+      -DCMAKE_CXX_EXTENSIONS=ON \
+      ../source/ \
+  && cmake --build . -j`nproc` \
+  && cmake --build . --target install
+
