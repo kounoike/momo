@@ -79,6 +79,17 @@ void Util::ParseArgs(int argc,
       },
       "");
 
+  auto is_nng_available = CLI::Validator(
+      [](std::string input) -> std::string {
+#if USE_NNG
+        return std::string();
+#else
+        return "Not available because your device does not have this "
+               "feature.";
+#endif
+      },
+      "");
+
   auto is_valid_resolution = CLI::Validator(
       [](std::string input) -> std::string {
         if (input == "QVGA" || input == "VGA" || input == "HD" ||
@@ -164,6 +175,9 @@ void Util::ParseArgs(int argc,
   app.add_flag("--fullscreen", args.fullscreen,
                "Use fullscreen window for videos (if SDL is available)")
       ->check(is_sdl_available);
+  app.add_flag("--use-nng", args.use_nng,
+               "Show video using ZeroMQ (if ZeroMQ is available and SDL is not enabled)")
+      ->check(is_nng_available);
   app.add_flag("--version", version, "Show version information");
   app.add_flag("--insecure", args.insecure,
                "Allow insecure server connections when using SSL");

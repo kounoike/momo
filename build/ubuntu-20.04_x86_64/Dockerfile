@@ -133,3 +133,23 @@ RUN set -ex \
   && add-apt-repository "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /" \
   && apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get -y install cuda=$CUDA_VERSION clang-10
+
+# nanomsg/nng
+ARG NNG_VERSION
+RUN set -ex \
+  && git clone --branch v$NNG_VERSION --depth 1 https://github.com/nanomsg/nng.git /root/nng-source \
+  && mkdir -p /root/nng-source/build \
+  && cd /root/nng-source/build \
+  && cmake \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_SHARED_LIBS=OFF \
+      -DCMAKE_INSTALL_PREFIX=/root/nng \
+      -DCMAKE_C_COMPILER=/root/llvm/clang/bin/clang \
+      -DCMAKE_CXX_COMPILER=/root/llvm/clang/bin/clang++ \
+      ../ \
+  && cmake --build . -j$JOBS \
+  && cmake --build . --target install
+
+# cwzx/nngpp
+ARG NNGPP_VERSION
+RUN git clone --branch nng-v$NNGPP_VERSION --depth 1 https://github.com/cwzx/nngpp.git /root/nngpp

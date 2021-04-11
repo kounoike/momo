@@ -31,9 +31,12 @@ pushd ../_build/local
     -DTARGET_OS_LINUX="ubuntu-18.04" \
     -DTARGET_ARCH="x86_64" \
     -DUSE_SDL2=ON \
+    -DUSE_NNG=ON \
     -DBOOST_ROOT_DIR=$INSTALL_DIR/boost \
     -DCLI11_ROOT_DIR=$INSTALL_DIR/CLI11 \
     -DSDL2_ROOT_DIR=$INSTALL_DIR/SDL2 \
+    -DNNG_ROOT_DIR=$INSTALL_DIR/nng \
+    -DNNGPP_ROOT_DIR=$INSTALL_DIR/nngpp \
     -DWEBRTC_INCLUDE_DIR=$INSTALL_DIR/webrtc/include \
     -DWEBRTC_LIBRARY_DIR=$INSTALL_DIR/webrtc/lib \
     -DCLANG_ROOT=$INSTALL_DIR/llvm/clang \

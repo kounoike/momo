@@ -102,3 +102,35 @@ if [ ! -e $INSTALL_DIR/SDL2/lib/libSDL2.a ]; then
     cmake --build . --target install
   popd
 fi
+
+# nanomsg/nng
+if [ ! -e $INSTALL_DIR/nng/lib/libnng.a ]; then
+  rm -rf $SOURCE_DIR/nng
+  rm -rf $BUILD_DIR/nng
+  rm -rf $INSTALL_DIR/nng
+  pushd $SOURCE_DIR
+    rm -rf nng
+    git clone --branch v$NNG_VERSION --depth 1 https://github.com/nanomsg/nng.git
+  popd
+  mkdir -p $BUILD_DIR/nng
+  pushd $BUILD_DIR/nng
+    CC=$INSTALL_DIR/llvm/clang/bin/clang \
+    CXX=$INSTALL_DIR/llvm/clang/bin/clang++ \
+    cmake \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_SHARED_LIBS=OFF \
+      -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR/nng \
+      $SOURCE_DIR/nng
+
+    cmake --build . -j$JOBS
+    cmake --build . --target install
+  popd
+fi
+
+# cwzx/nngpp header-only
+if [ ! -e $INSTALL_DIR/nngpp/include/nngpp/nngpp.h ]; then
+  pushd $INSTALL_DIR
+    rm -rf nngpp
+    git clone --branch nng-v$NNGPP_VERSION --depth 1 https://github.com/cwzx/nngpp.git
+  popd
+fi

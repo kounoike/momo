@@ -33,6 +33,10 @@
 #include "sdl_renderer/sdl_renderer.h"
 #endif
 
+#if USE_NNG
+#include "nng_sender/nng_sender.h"
+#endif
+
 #include "ayame/ayame_client.h"
 #include "metrics/metrics_server.h"
 #include "p2p/p2p_server.h"
@@ -171,19 +175,33 @@ int main(int argc, char* argv[]) {
   rtcm_config.h264_decoder = args.h264_decoder;
 
   rtcm_config.priority = args.priority;
+
+  std::unique_ptr<RTCManager> rtc_manager = nullptr;
+
 #if USE_SDL2
   std::unique_ptr<SDLRenderer> sdl_renderer = nullptr;
   if (args.use_sdl) {
     sdl_renderer.reset(new SDLRenderer(args.window_width, args.window_height,
                                        args.fullscreen));
+    rtc_manager.reset(new RTCManager(
+        std::move(rtcm_config), std::move(capturer), sdl_renderer.get()));
   }
-
-  std::unique_ptr<RTCManager> rtc_manager(new RTCManager(
-      std::move(rtcm_config), std::move(capturer), sdl_renderer.get()));
-#else
-  std::unique_ptr<RTCManager> rtc_manager(
-      new RTCManager(std::move(rtcm_config), std::move(capturer), nullptr));
 #endif
+
+#if USE_NNG
+  std::unique_ptr<NNGSender> nng_sender = nullptr;
+  if (args.use_nng) {
+    nng_sender.reset(new NNGSender());
+    rtc_manager.reset(new RTCManager(
+        std::move(rtcm_config), std::move(capturer), nng_sender.get()));
+  }
+#endif
+
+  if (rtc_manager == nullptr) {
+    rtc_manager.reset(
+        new RTCManager(std::move(rtcm_config), std::move(capturer), nullptr));
+
+  }
 
   {
     boost::asio::io_context ioc{1};
@@ -316,6 +334,11 @@ int main(int argc, char* argv[]) {
 #if USE_SDL2
   sdl_renderer = nullptr;
 #endif
+
+#if USE_NNG
+  nng_sender = nullptr;
+#endif
+
   rtc_manager = nullptr;
 
   return 0;
