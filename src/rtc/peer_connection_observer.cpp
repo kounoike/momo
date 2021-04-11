@@ -52,7 +52,7 @@ void PeerConnectionObserver::OnTrack(
     webrtc::VideoTrackInterface* video_track =
         static_cast<webrtc::VideoTrackInterface*>(track.get());
     video_tracks_.push_back(video_track);
-    receiver_->AddTrack(video_track);
+    receiver_->AddTrack(video_track, transceiver->receiver()->stream_ids());
   }
 }
 

@@ -8,7 +8,7 @@
 
 class VideoTrackReceiver {
  public:
-  virtual void AddTrack(webrtc::VideoTrackInterface* track) = 0;
+  virtual void AddTrack(webrtc::VideoTrackInterface* track, const std::vector<std::string>& stream_ids) = 0;
   virtual void RemoveTrack(webrtc::VideoTrackInterface* track) = 0;
 };
 

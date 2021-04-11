@@ -354,7 +354,7 @@ void SDLRenderer::SetOutlines() {
   cols_ = cols;
 }
 
-void SDLRenderer::AddTrack(webrtc::VideoTrackInterface* track) {
+void SDLRenderer::AddTrack(webrtc::VideoTrackInterface* track, const std::vector<std::string>& stream_ids) {
   std::unique_ptr<Sink> sink(new Sink(this, track));
   webrtc::MutexLock lock(&sinks_lock_);
   sinks_.push_back(std::make_pair(track, std::move(sink)));

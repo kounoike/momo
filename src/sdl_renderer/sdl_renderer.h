@@ -30,7 +30,7 @@ class SDLRenderer : public VideoTrackReceiver {
   int RenderThread();
 
   void SetOutlines();
-  void AddTrack(webrtc::VideoTrackInterface* track) override;
+  void AddTrack(webrtc::VideoTrackInterface* track, const std::vector<std::string>& stream_ids) override;
   void RemoveTrack(webrtc::VideoTrackInterface* track) override;
 
  protected:
