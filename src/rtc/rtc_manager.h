@@ -56,7 +56,8 @@ class RTCManager {
  public:
   RTCManager(RTCManagerConfig config,
              rtc::scoped_refptr<ScalableVideoTrackSource> video_track_source,
-             VideoTrackReceiver* receiver);
+             VideoTrackReceiver* video_track_receiver,
+             AudioTrackReceiver* audio_track_receiver);
   ~RTCManager();
   void SetDataManager(RTCDataManager* data_manager);
   std::shared_ptr<RTCConnection> CreateConnection(
@@ -72,7 +73,8 @@ class RTCManager {
   std::unique_ptr<rtc::Thread> worker_thread_;
   std::unique_ptr<rtc::Thread> signaling_thread_;
   RTCManagerConfig config_;
-  VideoTrackReceiver* receiver_;
+  VideoTrackReceiver* video_track_receiver_;
+  AudioTrackReceiver* audio_track_receiver_;
   RTCDataManager* data_manager_;
 };
 

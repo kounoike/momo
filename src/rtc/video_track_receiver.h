@@ -12,4 +12,10 @@ class VideoTrackReceiver {
   virtual void RemoveTrack(webrtc::VideoTrackInterface* track) = 0;
 };
 
+class AudioTrackReceiver {
+ public:
+  virtual void AddTrack(webrtc::AudioTrackInterface* track, const std::vector<std::string>& stream_ids) = 0;
+  virtual void RemoveTrack(webrtc::AudioTrackInterface* track) = 0;
+};
+
 #endif

@@ -11,9 +11,10 @@
 class PeerConnectionObserver : public webrtc::PeerConnectionObserver {
  public:
   PeerConnectionObserver(RTCMessageSender* sender,
-                         VideoTrackReceiver* receiver,
+                         VideoTrackReceiver* video_track_receiver,
+                         AudioTrackReceiver* audio_track_receiver,
                          RTCDataManager* data_manager)
-      : sender_(sender), receiver_(receiver), data_manager_(data_manager) {}
+      : sender_(sender), video_track_receiver_(video_track_receiver), audio_track_receiver_(audio_track_receiver), data_manager_(data_manager) {}
   ~PeerConnectionObserver();
 
  private:
@@ -36,9 +37,11 @@ class PeerConnectionObserver : public webrtc::PeerConnectionObserver {
   void ClearAllRegisteredTracks();
 
   RTCMessageSender* sender_;
-  VideoTrackReceiver* receiver_;
+  VideoTrackReceiver* video_track_receiver_;
+  AudioTrackReceiver* audio_track_receiver_;
   RTCDataManager* data_manager_;
   std::vector<webrtc::VideoTrackInterface*> video_tracks_;
+  std::vector<webrtc::AudioTrackInterface*> audio_tracks_;
 };
 
 #endif

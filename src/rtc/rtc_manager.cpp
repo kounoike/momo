@@ -29,8 +29,9 @@
 RTCManager::RTCManager(
     RTCManagerConfig config,
     rtc::scoped_refptr<ScalableVideoTrackSource> video_track_source,
-    VideoTrackReceiver* receiver)
-    : config_(std::move(config)), receiver_(receiver), data_manager_(nullptr) {
+    VideoTrackReceiver* video_track_receiver,
+    AudioTrackReceiver* audio_track_receiver)
+    : config_(std::move(config)), video_track_receiver_(video_track_receiver), audio_track_receiver_(audio_track_receiver), data_manager_(nullptr) {
   rtc::InitializeSSL();
 
   network_thread_ = rtc::Thread::CreateWithSocketServer();
@@ -167,8 +168,8 @@ RTCManager::RTCManager(
         video_track_->set_content_hint(
             webrtc::VideoTrackInterface::ContentHint::kText);
       }
-      if (receiver_ != nullptr && config_.show_me) {
-        receiver_->AddTrack(video_track_, std::vector<std::string>({"self"}));
+      if (video_track_receiver_ != nullptr && config_.show_me) {
+        video_track_receiver_->AddTrack(video_track_, std::vector<std::string>({"self"}));
       }
     } else {
       RTC_LOG(LS_WARNING) << __FUNCTION__ << ": Cannot create video_track";
@@ -197,7 +198,7 @@ std::shared_ptr<RTCConnection> RTCManager::CreateConnection(
   rtc_config.enable_dtls_srtp = true;
   rtc_config.sdp_semantics = webrtc::SdpSemantics::kUnifiedPlan;
   std::unique_ptr<PeerConnectionObserver> observer(
-      new PeerConnectionObserver(sender, receiver_, data_manager_));
+      new PeerConnectionObserver(sender, video_track_receiver_, audio_track_receiver_, data_manager_));
   webrtc::PeerConnectionDependencies dependencies(observer.get());
 
   // WebRTC の SSL 接続の検証は自前のルート証明書(rtc_base/ssl_roots.h)でやっていて、

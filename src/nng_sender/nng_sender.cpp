@@ -6,7 +6,9 @@
 #include <nngpp/protocol/pub0.h>
 
 NNGSender::NNGSender() :
-  socket_(nng::pub::v0::open())
+  socket_(nng::pub::v0::open()),
+  video_track_receiver_(this),
+  audio_track_receiver_(this)
 {
 //   const zmqpp::endpoint_t endpoint = "tcp://127.0.0.1:5567";
   socket_.dial("tcp://127.0.0.1:5567", nng::flag::nonblock);
@@ -17,25 +19,111 @@ NNGSender::NNGSender() :
 
 NNGSender::~NNGSender() {
   std::cout << "NNGSender::dtor" << std::endl;
+}
+
+NNGSender::NNGAudioTrackReceiver::NNGAudioTrackReceiver(NNGSender* sender) : sender_(sender) {
+  std::cout << "AudioTrackReceiver ctor" << std::endl;
+}
+
+NNGSender::NNGAudioTrackReceiver::~NNGAudioTrackReceiver() {
+  std::cout << "AudioTrackReceiver dtor" << std::endl;
   webrtc::MutexLock lock(&sinks_lock_);
   sinks_.clear();
 }
 
-void NNGSender::AddTrack(webrtc::VideoTrackInterface* track, const std::vector<std::string>& stream_ids) {
-  if (stream_ids.size() != 1)
+void NNGSender::NNGAudioTrackReceiver::AddTrack(webrtc::AudioTrackInterface* track, const std::vector<std::string>& stream_ids) {
+  if (stream_ids.size() != 1) {
+    std::cerr << "stream_ids.size() != 1 : " << stream_ids.size() << std::endl;
     return;
-  const std::string msg(std::string("track/add/") + stream_ids[0] + "/" + track->id());
-  SendStringMessage(msg);
+  }
+  const std::string msg(std::string("track/audio/add/") + stream_ids[0] + "/" + track->id());
+  sender_->SendStringMessage(msg);
 
   std::cout << "AddTrack" << std::endl;
-  std::unique_ptr<Sink> sink(new Sink(this, track, stream_ids[0]));
+  std::unique_ptr<Sink> sink(new Sink(sender_, track, stream_ids[0]));
   webrtc::MutexLock lock(&sinks_lock_);
   sinks_.push_back(std::make_pair(track, std::move(sink)));
 }
 
-void NNGSender::RemoveTrack(webrtc::VideoTrackInterface* track) {
-  const std::string msg(std::string("track/remove/") + "/" + track->id());
-  SendStringMessage(msg);
+void NNGSender::NNGAudioTrackReceiver::RemoveTrack(webrtc::AudioTrackInterface* track) {
+  const std::string msg(std::string("track/audio/remove/") + track->id());
+  sender_->SendStringMessage(msg);
+  std::cout << "RemoveTrack" << std::endl;
+
+  webrtc::MutexLock lock(&sinks_lock_);
+  sinks_.erase(
+      std::remove_if(sinks_.begin(), sinks_.end(),
+                     [track](const AudioTrackSinkVector::value_type& sink) {
+                       return sink.first == track;
+                     }),
+      sinks_.end());
+}
+
+NNGSender::NNGAudioTrackReceiver::Sink::Sink(NNGSender* sender,
+                        webrtc::AudioTrackInterface* track, const std::string& stream_id)
+    : sender_(sender),
+      stream_id_(stream_id),
+      track_(track),
+      frame_count_(0) {
+  int signal_level = 0;
+  track_->GetSignalLevel(&signal_level);
+  std::cout << "AudioSink ctor: " << stream_id_ << "/" << track->id() << " "
+    << track_->enabled() << " "
+    << track_->state() << " "
+    << signal_level
+    << std::endl;
+  track_->AddSink(this);
+}
+
+NNGSender::NNGAudioTrackReceiver::Sink::~Sink() {
+  track_->RemoveSink(this);
+  std::cout << "AudioSink dtor: " << stream_id_ << "/" << track_->id() << std::endl;
+}
+
+void NNGSender::NNGAudioTrackReceiver::Sink::OnData(const void* audio_data,
+            int bits_per_sample,
+            int sample_rate,
+            size_t number_of_channels,
+            size_t number_of_frames) {
+  frame_count_ += number_of_frames;
+  std::cout << "AudioSink OnData1: " << bits_per_sample << " " << sample_rate << " " << number_of_channels << " " << number_of_frames << std::endl;
+}
+
+void NNGSender::NNGAudioTrackReceiver::Sink::OnData(const void* audio_data,
+            int bits_per_sample,
+            int sample_rate,
+            size_t number_of_channels,
+            size_t number_of_frames,
+            absl::optional<int64_t> absolute_capture_timestamp_ms) {
+  frame_count_ += number_of_frames;
+  std::cout << "AudioSink OnData2: " << bits_per_sample << " " << sample_rate << " " << number_of_channels << " " << number_of_frames << std::endl;
+}
+
+NNGSender::NNGVideoTrackReceiver::NNGVideoTrackReceiver(NNGSender* sender) : sender_(sender) {
+}
+
+NNGSender::NNGVideoTrackReceiver::~NNGVideoTrackReceiver() {
+  webrtc::MutexLock lock(&sinks_lock_);
+  sinks_.clear();
+}
+
+void NNGSender::NNGVideoTrackReceiver::AddTrack(webrtc::VideoTrackInterface* track, const std::vector<std::string>& stream_ids) {
+  if (stream_ids.size() != 1) {
+    std::cerr << "stream_ids.size() != 1 : " << stream_ids.size() << std::endl;
+    return;
+  }
+  const std::string msg(std::string("track/video/add/") + stream_ids[0] + "/" + track->id());
+  sender_->SendStringMessage(msg);
+
+  std::cout << "AddTrack: " << stream_ids[0] << "/" << track->id() << " " << track->GetSource()->SupportsEncodedOutput() << std::endl;
+  std::unique_ptr<Sink> sink(new Sink(sender_, track, stream_ids[0]));
+  webrtc::MutexLock lock(&sinks_lock_);
+  sinks_.push_back(std::make_pair(track, std::move(sink)));
+}
+
+void NNGSender::NNGVideoTrackReceiver::RemoveTrack(webrtc::VideoTrackInterface* track) {
+  const std::string msg(std::string("track/video/remove/") + "/" + track->id());
+  sender_->SendStringMessage(msg);
   std::cout << "RemoveTrack" << std::endl;
 
   webrtc::MutexLock lock(&sinks_lock_);
@@ -82,7 +170,7 @@ void NNGSender::SendFrameMessage(const std::string& stream_id, const std::string
   socket_.send(std::move(nngbuf));
 }
 
-NNGSender::Sink::Sink(NNGSender* sender,
+NNGSender::NNGVideoTrackReceiver::Sink::Sink(NNGSender* sender,
                         webrtc::VideoTrackInterface* track, const std::string& stream_id)
     : sender_(sender),
       stream_id_(stream_id),
@@ -90,20 +178,20 @@ NNGSender::Sink::Sink(NNGSender* sender,
       frame_count_(0),
       input_width_(0),
       input_height_(0) {
-  std::cout << "Sink ctor: " << stream_id_ << "/" << track->id() << std::endl;
+  std::cout << "VideoSink ctor: " << stream_id_ << "/" << track->id() << std::endl;
   track_->AddOrUpdateSink(this, rtc::VideoSinkWants());
 }
 
-NNGSender::Sink::~Sink() {
+NNGSender::NNGVideoTrackReceiver::Sink::~Sink() {
   track_->RemoveSink(this);
-  std::cout << "Sink dtor: " << stream_id_ << "/" << track_->id() << std::endl;
+  std::cout << "VideoSink dtor: " << stream_id_ << "/" << track_->id() << std::endl;
 }
 
-webrtc::Mutex* NNGSender::Sink::GetMutex() {
+webrtc::Mutex* NNGSender::NNGVideoTrackReceiver::Sink::GetMutex() {
   return &frame_params_lock_;
 }
 
-void NNGSender::Sink::OnFrame(const webrtc::VideoFrame& frame) {
+void NNGSender::NNGVideoTrackReceiver::Sink::OnFrame(const webrtc::VideoFrame& frame) {
   if (frame.width() == 0 || frame.height() == 0)
     return;
   webrtc::MutexLock lock(GetMutex());
@@ -121,11 +209,11 @@ void NNGSender::Sink::OnFrame(const webrtc::VideoFrame& frame) {
     input_height_, libyuv::FOURCC_RAW);
 
   if (frame_count_++ % 100 == 0) {
-    std::cout << "OnFrame: " << frame.width() << "x" << frame.height() << " " 
+    std::cout << "OnFrame: " << frame.width() << "x" << frame.height() << " " << input_width_ << "x" << input_height_ << " "
       <<  static_cast<int>(frame.video_frame_buffer()->type())
       << " Chroma: " << i420->ChromaWidth() << "x" << i420->ChromaHeight()
       << " Stride: " << i420->StrideY() << ", " << i420->StrideU() << ", " << i420->StrideV() 
       << " count: " << frame_count_ << std::endl;
   }
-  sender_->SendFrameMessage(stream_id_, track_->id(), frame_count_, input_width_, input_height_, &image_[0]);
+  sender_->SendFrameMessage(stream_id_, track_->id(), frame_count_, input_width_, input_height_, image_.get());
 }

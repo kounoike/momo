@@ -184,7 +184,7 @@ int main(int argc, char* argv[]) {
     sdl_renderer.reset(new SDLRenderer(args.window_width, args.window_height,
                                        args.fullscreen));
     rtc_manager.reset(new RTCManager(
-        std::move(rtcm_config), std::move(capturer), sdl_renderer.get()));
+        std::move(rtcm_config), std::move(capturer), sdl_renderer.get(), nullptr));
   }
 #endif
 
@@ -193,13 +193,13 @@ int main(int argc, char* argv[]) {
   if (args.use_nng) {
     nng_sender.reset(new NNGSender());
     rtc_manager.reset(new RTCManager(
-        std::move(rtcm_config), std::move(capturer), nng_sender.get()));
+        std::move(rtcm_config), std::move(capturer), nng_sender->GetVideoTrackReceiver(), nng_sender->GetAudioTrackReceiver()));
   }
 #endif
 
   if (rtc_manager == nullptr) {
     rtc_manager.reset(
-        new RTCManager(std::move(rtcm_config), std::move(capturer), nullptr));
+        new RTCManager(std::move(rtcm_config), std::move(capturer), nullptr, nullptr));
 
   }
 
