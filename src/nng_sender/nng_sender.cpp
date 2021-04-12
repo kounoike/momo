@@ -10,11 +10,8 @@ NNGSender::NNGSender() :
   video_track_receiver_(this),
   audio_track_receiver_(this)
 {
-//   const zmqpp::endpoint_t endpoint = "tcp://127.0.0.1:5567";
   socket_.dial("tcp://127.0.0.1:5567", nng::flag::nonblock);
   std::cout << "NNGSender::ctor" << std::endl;
-//   socket_.set(zmqpp::socket_option::send_high_water_mark, 1);
-//   socket_.connect(endpoint);
 }
 
 NNGSender::~NNGSender() {

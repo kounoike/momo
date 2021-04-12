@@ -103,8 +103,6 @@ class NNGSender {
   }
 
  private:
-//   zmqpp::socket socket_;
-//   static zmqpp::context context_;
   nng::socket socket_;
   webrtc::Mutex socket_lock_;
 
