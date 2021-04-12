@@ -145,7 +145,8 @@ void NNGSender::SendStringMessage(const std::string& msg) {
 void NNGSender::SendFrameMessage(const std::string& stream_id, const std::string& track_id, uint32_t frame_count, uint32_t width, uint32_t height, const uint8_t* image_ptr) {
   std::string topic_header("frame/" + stream_id + "/" + track_id + "/");
   size_t sz = topic_header.size() + sizeof(int32_t) * 3 + width * height * 3;
-  uint8_t buf[sz];
+  auto nngbuf = nng::make_buffer(sz);
+  uint8_t* buf = static_cast<uint8_t*>(nngbuf.data());
   size_t pos = 0;
   memcpy(&buf[pos], topic_header.data(), topic_header.size());
   pos += topic_header.size();
@@ -163,9 +164,7 @@ void NNGSender::SendFrameMessage(const std::string& stream_id, const std::string
   buf[pos++] = static_cast<uint8_t>(height >> 8);
   buf[pos++] = static_cast<uint8_t>(height);
   memcpy(&buf[pos], image_ptr, width * height * 3);
-
-  auto nngbuf = nng::make_buffer(sz);
-  memcpy(nngbuf.data(), buf, sz);
+ 
   webrtc::MutexLock lock(&socket_lock_);
   socket_.send(std::move(nngbuf));
 }
