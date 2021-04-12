@@ -155,6 +155,7 @@ void NNGSender::SendFrameMessage(const std::string& stream_id, const std::string
   memcpy(&buf[pos], topic_header.data(), topic_header.size());
   pos += topic_header.size();
   //愚直に詰め込み・・・
+  // フレームのタイムスタンプも送信しても良いかも
   buf[pos++] = static_cast<uint8_t>(frame_count >> 24);
   buf[pos++] = static_cast<uint8_t>(frame_count >> 16);
   buf[pos++] = static_cast<uint8_t>(frame_count >> 8);
