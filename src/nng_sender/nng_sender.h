@@ -84,6 +84,15 @@ class NNGSender {
 
   void SendStringMessage(const std::string& msg);
   void SendFrameMessage(const std::string& stream_id, const std::string& track_id, uint32_t frame_count, uint32_t width, uint32_t height, const uint8_t* image_ptr);
+  void SendAudioDataMessage(
+    const std::string& stream_id,
+    const std::string& track_id,
+    const void* audio_data,
+    int bits_per_sample,
+    int sample_rate,
+    size_t number_of_channels,
+    size_t number_of_frames);
+
 
  public:
   NNGVideoTrackReceiver* GetVideoTrackReceiver() {

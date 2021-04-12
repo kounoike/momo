@@ -96,7 +96,14 @@ void NNGSender::NNGAudioTrackReceiver::Sink::OnData(const void* audio_data,
             size_t number_of_frames,
             absl::optional<int64_t> absolute_capture_timestamp_ms) {
   frame_count_ += number_of_frames;
-  std::cout << "AudioSink OnData2: " << bits_per_sample << " " << sample_rate << " " << number_of_channels << " " << number_of_frames << std::endl;
+  if (frame_count_ >= sample_rate) {
+    std::cout << "AudioSink OnData2: " << bits_per_sample << " " << sample_rate << " " << number_of_channels << " " << number_of_frames
+      << " " << absolute_capture_timestamp_ms.value_or(-1) << " " << frame_count_
+      << std::endl;
+    frame_count_ = 0;
+  }
+
+  sender_->SendAudioDataMessage(stream_id_, track_->id(), audio_data, bits_per_sample, sample_rate, number_of_channels, number_of_frames);
 }
 
 NNGSender::NNGVideoTrackReceiver::NNGVideoTrackReceiver(NNGSender* sender) : sender_(sender) {
@@ -169,6 +176,45 @@ void NNGSender::SendFrameMessage(const std::string& stream_id, const std::string
   socket_.send(std::move(nngbuf));
 }
 
+void NNGSender::SendAudioDataMessage(
+  const std::string& stream_id,
+  const std::string& track_id,
+  const void* audio_data,
+  int bits_per_sample,
+  int sample_rate,
+  size_t number_of_channels,
+  size_t number_of_frames) {
+  std::string topic_header("audio/" + stream_id + "/" + track_id + "/");
+  size_t audio_data_size = number_of_channels * number_of_frames * sample_rate * bits_per_sample / 8;
+  size_t sz = topic_header.size() + sizeof(int32_t) * 4 + audio_data_size;
+  auto nngbuf = nng::make_buffer(sz);
+  uint8_t* buf = static_cast<uint8_t*>(nngbuf.data());
+  size_t pos = 0;
+  memcpy(&buf[pos], topic_header.data(), topic_header.size());
+  pos += topic_header.size();
+  //愚直に詰め込み・・・
+  buf[pos++] = static_cast<uint8_t>(bits_per_sample >> 24);
+  buf[pos++] = static_cast<uint8_t>(bits_per_sample >> 16);
+  buf[pos++] = static_cast<uint8_t>(bits_per_sample >> 8);
+  buf[pos++] = static_cast<uint8_t>(bits_per_sample);
+  buf[pos++] = static_cast<uint8_t>(sample_rate >> 24);
+  buf[pos++] = static_cast<uint8_t>(sample_rate >> 16);
+  buf[pos++] = static_cast<uint8_t>(sample_rate >> 8);
+  buf[pos++] = static_cast<uint8_t>(sample_rate);
+  buf[pos++] = static_cast<uint8_t>(number_of_channels >> 24);
+  buf[pos++] = static_cast<uint8_t>(number_of_channels >> 16);
+  buf[pos++] = static_cast<uint8_t>(number_of_channels >> 8);
+  buf[pos++] = static_cast<uint8_t>(number_of_channels);
+  buf[pos++] = static_cast<uint8_t>(number_of_frames >> 24);
+  buf[pos++] = static_cast<uint8_t>(number_of_frames >> 16);
+  buf[pos++] = static_cast<uint8_t>(number_of_frames >> 8);
+  buf[pos++] = static_cast<uint8_t>(number_of_frames);
+  memcpy(&buf[pos], audio_data, audio_data_size);
+ 
+  webrtc::MutexLock lock(&socket_lock_);
+  socket_.send(std::move(nngbuf));
+}
+
 NNGSender::NNGVideoTrackReceiver::Sink::Sink(NNGSender* sender,
                         webrtc::VideoTrackInterface* track, const std::string& stream_id)
     : sender_(sender),
@@ -212,7 +258,9 @@ void NNGSender::NNGVideoTrackReceiver::Sink::OnFrame(const webrtc::VideoFrame& f
       <<  static_cast<int>(frame.video_frame_buffer()->type())
       << " Chroma: " << i420->ChromaWidth() << "x" << i420->ChromaHeight()
       << " Stride: " << i420->StrideY() << ", " << i420->StrideU() << ", " << i420->StrideV() 
-      << " count: " << frame_count_ << std::endl;
+      << " count: " << frame_count_
+      << " timestamp: " << frame.timestamp() << " timestamp_us: " << frame.timestamp_us()
+      << std::endl;
   }
   sender_->SendFrameMessage(stream_id_, track_->id(), frame_count_, input_width_, input_height_, image_.get());
 }
