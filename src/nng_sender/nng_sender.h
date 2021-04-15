@@ -1,6 +1,7 @@
 #ifndef ZMQ_SENDER_H_
 #define ZMQ_SENDER_H_
 
+#include <tuple>
 #include <rtc/video_track_receiver.h>
 #include <rtc_base/synchronization/mutex.h>
 #include <nngpp/nngpp.h>
@@ -73,11 +74,25 @@ class NNGSender {
       uint32_t input_width_;
       uint32_t input_height_;
     };
+    class EncodedSink : public rtc::VideoSinkInterface<webrtc::RecordableEncodedFrame> {
+    public:
+      EncodedSink(NNGSender* sender, webrtc::VideoTrackInterface* track, const std::string& stream_id);
+      ~EncodedSink();
+
+      void OnFrame(const webrtc::RecordableEncodedFrame& frame) override;
+    private:
+      NNGSender* sender_;
+      std::string stream_id_;
+      rtc::scoped_refptr<webrtc::VideoTrackInterface> track_;
+      uint32_t frame_count_;
+      uint32_t input_width_;
+      uint32_t input_height_;
+    };
    private:
     webrtc::Mutex sinks_lock_;
     NNGSender* sender_;
     typedef std::vector<
-        std::pair<webrtc::VideoTrackInterface*, std::unique_ptr<Sink> > >
+        std::tuple<webrtc::VideoTrackInterface*, std::unique_ptr<Sink>, std::unique_ptr<EncodedSink> > >
         VideoTrackSinkVector;
     VideoTrackSinkVector sinks_;
   };
@@ -92,7 +107,7 @@ class NNGSender {
     int sample_rate,
     size_t number_of_channels,
     size_t number_of_frames);
-
+  void SendEncodedFrameMessage(const std::string& stream_id, const std::string& track_id, const webrtc::RecordableEncodedFrame& frame);
 
  public:
   NNGVideoTrackReceiver* GetVideoTrackReceiver() {
