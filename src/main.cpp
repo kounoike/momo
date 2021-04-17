@@ -217,6 +217,11 @@ int main(int argc, char* argv[]) {
       }
       rtc_manager->SetDataManager(data_manager.get());
     }
+#ifdef USE_NNG
+    if (args.nng_data_channel) {
+      rtc_manager->SetDataManager(nng_sender->GetDataManager());
+    }
+#endif
 
     boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);
     signals.async_wait(

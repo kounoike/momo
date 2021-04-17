@@ -8,7 +8,8 @@
 NNGSender::NNGSender() :
   socket_(nng::pub::v0::open()),
   video_track_receiver_(this),
-  audio_track_receiver_(this)
+  audio_track_receiver_(this),
+  data_manager_(this)
 {
   socket_.dial("tcp://127.0.0.1:5567", nng::flag::nonblock);
   std::cout << "NNGSender::ctor" << std::endl;
@@ -230,6 +231,26 @@ void NNGSender::SendEncodedFrameMessage(const std::string& stream_id, const std:
   buf[pos++] = static_cast<uint8_t>(data_size >> 8);
   buf[pos++] = static_cast<uint8_t>(data_size);
   memcpy(&buf[pos], frame.encoded_buffer()->data(), data_size);
+ 
+  webrtc::MutexLock lock(&socket_lock_);
+  socket_.send(std::move(nngbuf));
+}
+
+void NNGSender::SendDataChannelMessage(int id, const webrtc::DataBuffer& buffer) {
+  std::string topic_header("data/message/" + std::to_string(id) + "/");
+  uint32_t data_size = buffer.size();
+  size_t sz = topic_header.size() + sizeof(uint32_t)  + data_size;
+
+  auto nngbuf = nng::make_buffer(sz);
+  uint8_t* buf = static_cast<uint8_t*>(nngbuf.data());
+  size_t pos = 0;
+  memcpy(&buf[pos], topic_header.data(), topic_header.size());
+  pos += topic_header.size();
+  buf[pos++] = static_cast<uint8_t>(data_size >> 24);
+  buf[pos++] = static_cast<uint8_t>(data_size >> 16);
+  buf[pos++] = static_cast<uint8_t>(data_size >> 8);
+  buf[pos++] = static_cast<uint8_t>(data_size);
+  memcpy(&buf[pos], buffer.data.data<uint8_t>(), data_size);
  
   webrtc::MutexLock lock(&socket_lock_);
   socket_.send(std::move(nngbuf));

@@ -5,6 +5,9 @@
 #include <rtc/video_track_receiver.h>
 #include <rtc_base/synchronization/mutex.h>
 #include <nngpp/nngpp.h>
+#include "nng_data_manager.h"
+
+class NNGDataManager;
 
 class NNGSender {
  public:
@@ -108,6 +111,7 @@ class NNGSender {
     size_t number_of_channels,
     size_t number_of_frames);
   void SendEncodedFrameMessage(const std::string& stream_id, const std::string& track_id, const webrtc::RecordableEncodedFrame& frame);
+  void SendDataChannelMessage(int id, const webrtc::DataBuffer& buffer);
 
  public:
   NNGVideoTrackReceiver* GetVideoTrackReceiver() {
@@ -115,6 +119,9 @@ class NNGSender {
   }
   NNGAudioTrackReceiver* GetAudioTrackReceiver() {
     return &audio_track_receiver_;
+  }
+  NNGDataManager* GetDataManager() {
+    return &data_manager_;
   }
 
  private:
@@ -124,6 +131,7 @@ class NNGSender {
   NNGVideoTrackReceiver video_track_receiver_;
   NNGAudioTrackReceiver audio_track_receiver_;
 
+  NNGDataManager data_manager_;
 };
 
 #endif
