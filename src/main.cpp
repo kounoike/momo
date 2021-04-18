@@ -157,6 +157,8 @@ int main(int argc, char* argv[]) {
   rtcm_config.simulcast = args.sora_simulcast;
   rtcm_config.hardware_encoder_only = args.hw_mjpeg_decoder;
 
+  rtcm_config.create_data_channel = args.create_data_channel;
+
   rtcm_config.disable_echo_cancellation = args.disable_echo_cancellation;
   rtcm_config.disable_auto_gain_control = args.disable_auto_gain_control;
   rtcm_config.disable_noise_suppression = args.disable_noise_suppression;
@@ -191,6 +193,7 @@ int main(int argc, char* argv[]) {
 #if USE_NNG
   std::unique_ptr<NNGSender> nng_sender = nullptr;
   if (args.use_nng) {
+    std::cout << "use_nng" << std::endl;
     nng_sender.reset(new NNGSender());
     rtc_manager.reset(new RTCManager(
         std::move(rtcm_config), std::move(capturer), nng_sender->GetVideoTrackReceiver(), nng_sender->GetAudioTrackReceiver()));
@@ -218,7 +221,8 @@ int main(int argc, char* argv[]) {
       rtc_manager->SetDataManager(data_manager.get());
     }
 #ifdef USE_NNG
-    if (args.nng_data_channel) {
+    if (args.use_nng && (use_ayame || use_test)) {
+      std::cout << "enable NNGDataManager" << std::endl;
       rtc_manager->SetDataManager(nng_sender->GetDataManager());
     }
 #endif

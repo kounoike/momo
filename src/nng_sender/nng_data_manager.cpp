@@ -22,10 +22,11 @@ NNGDataManager::~NNGDataManager() {
 }
 
 void NNGDataManager::ReceiveThread(void* obj) {
+  std::cout << "Start NNGDataManager::ReceiveThread" << std::endl;
   auto data_manager = static_cast<NNGDataManager*>(obj);
   while(true) {
     nng::buffer buf = data_manager->socket_.recv();
-    std::cout << "NNG DataChannel message received size: " << buf.size() << std::endl;
+    std::cout << "NNG DataManager NNGmessage received size: " << buf.size() << " num data channels: " << data_manager->data_channels_.size() << std::endl;
     for (auto channel: data_manager->data_channels_) {
       channel->Send(buf);
     }
@@ -35,6 +36,7 @@ void NNGDataManager::ReceiveThread(void* obj) {
 
 void NNGDataManager::OnDataChannel(
       rtc::scoped_refptr<webrtc::DataChannelInterface> data_channel) {
+  std::cout << "OnDataChannel id: " << data_channel->id() << " label: " << data_channel->label() << std::endl;
   NNGDataChannel* channel = new NNGDataChannel(sender_, data_channel);
   webrtc::MutexLock lock(&data_channels_lock_);
   data_channels_.push_back(channel);
@@ -52,7 +54,8 @@ NNGDataManager::NNGDataChannel::NNGDataChannel(
     << std::endl;
   std::string msg("data/start/" + std::to_string(data_channel_->id()));
   sender_->SendStringMessage(msg);
-  data_channel_->RegisterObserver(this);  
+  data_channel_->RegisterObserver(this);
+  std::cout << "RegisterObserver done." << std::endl;
 }
 
 
@@ -62,7 +65,7 @@ NNGDataManager::NNGDataChannel::~NNGDataChannel() {
 
 
 void NNGDataManager::NNGDataChannel::OnStateChange() {
-  std::cout << "OnStateChange" << std::endl;
+  std::cout << "OnStateChange: " << data_channel_->DataStateString(data_channel_->state()) << std::endl;
 }
 
 void NNGDataManager::NNGDataChannel::OnMessage(const webrtc::DataBuffer& buffer) {
@@ -73,7 +76,9 @@ void NNGDataManager::NNGDataChannel::OnMessage(const webrtc::DataBuffer& buffer)
 }
 
 void NNGDataManager::NNGDataChannel::Send(const nng::buffer& buffer) {
+  std::cout << "Send start" << std::endl;
   rtc::CopyOnWriteBuffer cow_buffer(static_cast<uint8_t*>(buffer.data()), buffer.size());
   webrtc::DataBuffer data_buffer(cow_buffer, true);
-  data_channel_->Send(data_buffer);
+  bool ret = data_channel_->Send(data_buffer);
+  std::cout << "Send ret: " << (ret ? "true" : "false") << std::endl;
 }

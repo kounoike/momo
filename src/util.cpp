@@ -178,8 +178,7 @@ void Util::ParseArgs(int argc,
   app.add_flag("--use-nng", args.use_nng,
                "Show video using ZeroMQ (if ZeroMQ is available and SDL is not enabled)")
       ->check(is_nng_available);
-  app.add_flag("--nng-data-channel", args.nng_data_channel, "Use NNG for DataChannel communication")
-      ->check(is_nng_available);
+  app.add_flag("--create-data-channel", args.create_data_channel, "Create Data Channel");
   app.add_flag("--version", version, "Show version information");
   app.add_flag("--insecure", args.insecure,
                "Allow insecure server connections when using SSL");

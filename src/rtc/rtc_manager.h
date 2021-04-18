@@ -3,6 +3,7 @@
 
 // WebRTC
 #include <api/peer_connection_interface.h>
+#include <api/data_channel_interface.h>
 #include <pc/video_track_source.h>
 
 #include "rtc_connection.h"
@@ -22,6 +23,8 @@ struct RTCManagerConfig {
   bool show_me = false;
   bool simulcast = false;
   bool hardware_encoder_only = false;
+
+  bool create_data_channel = false;
 
   bool disable_echo_cancellation = false;
   bool disable_auto_gain_control = false;
@@ -60,6 +63,7 @@ class RTCManager {
              AudioTrackReceiver* audio_track_receiver);
   ~RTCManager();
   void SetDataManager(RTCDataManager* data_manager);
+  RTCDataManager* GetDataManager() { return data_manager_; }
   std::shared_ptr<RTCConnection> CreateConnection(
       webrtc::PeerConnectionInterface::RTCConfiguration rtc_config,
       RTCMessageSender* sender);
@@ -76,6 +80,7 @@ class RTCManager {
   VideoTrackReceiver* video_track_receiver_;
   AudioTrackReceiver* audio_track_receiver_;
   RTCDataManager* data_manager_;
+  rtc::scoped_refptr<webrtc::DataChannelInterface> data_channel_;
 };
 
 #endif

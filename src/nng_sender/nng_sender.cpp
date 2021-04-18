@@ -105,6 +105,7 @@ void NNGSender::NNGAudioTrackReceiver::Sink::OnData(const void* audio_data,
 }
 
 NNGSender::NNGVideoTrackReceiver::NNGVideoTrackReceiver(NNGSender* sender) : sender_(sender) {
+  std::cout << "VideoTrackReceiver ctor." << std::endl;
 }
 
 NNGSender::NNGVideoTrackReceiver::~NNGVideoTrackReceiver() {
@@ -120,7 +121,7 @@ void NNGSender::NNGVideoTrackReceiver::AddTrack(webrtc::VideoTrackInterface* tra
   const std::string msg(std::string("track/video/add/") + stream_ids[0] + "/" + track->id());
   sender_->SendStringMessage(msg);
 
-  std::cout << "AddTrack: " << stream_ids[0] << "/" << track->id() << " " << track->GetSource()->SupportsEncodedOutput() << std::endl;
+  std::cout << "VideoTrackReceiver AddTrack: " << stream_ids[0] << "/" << track->id() << " " << track->GetSource()->SupportsEncodedOutput() << std::endl;
   std::unique_ptr<Sink> sink(new Sink(sender_, track, stream_ids[0]));
   std::unique_ptr<EncodedSink> encoded_sink(new EncodedSink(sender_, track, stream_ids[0]));
   webrtc::MutexLock lock(&sinks_lock_);

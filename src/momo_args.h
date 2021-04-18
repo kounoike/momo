@@ -34,9 +34,9 @@ struct MomoArgs {
   int window_height = 480;
   bool fullscreen = false;
   bool use_nng = false;
-  bool nng_data_channel = false;
   std::string serial_device = "";
   unsigned int serial_rate = 9600;
+  bool create_data_channel = false;
   bool insecure = false;
   bool screen_capture = false;
   int metrics_port = -1;

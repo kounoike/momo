@@ -7,6 +7,7 @@
 #include <api/audio_codecs/builtin_audio_decoder_factory.h>
 #include <api/audio_codecs/builtin_audio_encoder_factory.h>
 #include <api/create_peerconnection_factory.h>
+#include <api/data_channel_interface.h>
 #include <api/rtc_event_log/rtc_event_log_factory.h>
 #include <api/task_queue/default_task_queue_factory.h>
 #include <api/video_track_source_proxy.h>
@@ -31,7 +32,11 @@ RTCManager::RTCManager(
     rtc::scoped_refptr<ScalableVideoTrackSource> video_track_source,
     VideoTrackReceiver* video_track_receiver,
     AudioTrackReceiver* audio_track_receiver)
-    : config_(std::move(config)), video_track_receiver_(video_track_receiver), audio_track_receiver_(audio_track_receiver), data_manager_(nullptr) {
+    : config_(std::move(config)),
+      video_track_receiver_(video_track_receiver),
+      audio_track_receiver_(audio_track_receiver),
+      data_manager_(nullptr),
+      data_channel_(nullptr) {
   rtc::InitializeSSL();
 
   network_thread_ = rtc::Thread::CreateWithSocketServer();
@@ -213,6 +218,17 @@ std::shared_ptr<RTCConnection> RTCManager::CreateConnection(
   if (!connection) {
     RTC_LOG(LS_ERROR) << __FUNCTION__ << ": CreatePeerConnection failed";
     return nullptr;
+  }
+
+  if (data_manager_ != nullptr && this->config_.create_data_channel) {
+    std::string label("data_channel");
+    std::cout << __FUNCTION__ << ": CreateDataChannel: " << label << std::endl;
+    webrtc::DataChannelInit init;
+    init.ordered = false;
+    init.reliable = false;
+    init.maxRetransmitTime = 0;
+    data_channel_ = connection->CreateDataChannel(label, &init);
+    data_manager_->OnDataChannel(data_channel_);
   }
 
   return std::make_shared<RTCConnection>(sender, std::move(observer),
