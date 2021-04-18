@@ -35,6 +35,7 @@
 
 #if USE_NNG
 #include "nng_sender/nng_sender.h"
+#include "nng_sender/nng_capture.h"
 #endif
 
 #include "ayame/ayame_client.h"
@@ -106,6 +107,13 @@ int main(int argc, char* argv[]) {
     }
 #endif
 
+#if USE_NNG
+    if(args.use_nng && args.nng_capture) {
+      rtc::scoped_refptr<NNGCapture> nng_capturer(new rtc::RefCountedObject<NNGCapture>());
+      return nng_capturer;
+    }
+#endif
+
     auto size = args.GetSize();
 #if defined(__APPLE__)
     return MacCapturer::Create(size.width, size.height, args.framerate,
@@ -139,6 +147,7 @@ int main(int argc, char* argv[]) {
     return DeviceVideoCapturer::Create(size.width, size.height, args.framerate,
                                        args.video_device);
 #endif
+
   })();
 
   if (!capturer && !args.no_video_device) {
