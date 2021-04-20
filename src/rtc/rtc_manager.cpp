@@ -26,6 +26,7 @@
 #include "rtc_ssl_verifier.h"
 #include "scalable_track_source.h"
 #include "util.h"
+#include "nng_sender/nng_audio_device_module.h"
 
 RTCManager::RTCManager(
     RTCManagerConfig config,
@@ -77,21 +78,34 @@ RTCManager::RTCManager(
   // media_dependencies
   cricket::MediaEngineDependencies media_dependencies;
   media_dependencies.task_queue_factory = dependencies.task_queue_factory.get();
-#if defined(_WIN32)
-  media_dependencies.adm =
-      worker_thread_->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule> >(
-          RTC_FROM_HERE, [&] {
-            return webrtc::CreateWindowsCoreAudioAudioDeviceModule(
-                dependencies.task_queue_factory.get());
-          });
-#else
-  media_dependencies.adm =
-      worker_thread_->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule> >(
-          RTC_FROM_HERE, [&] {
-            return webrtc::AudioDeviceModule::Create(
-                audio_layer, dependencies.task_queue_factory.get());
-          });
+  
+  if (config_.nng_audio) {
+#if USE_NNG
+    media_dependencies.adm =
+        worker_thread_->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule> >(
+            RTC_FROM_HERE, [&] {
+              return NNGAudioDeviceModule::Create(dependencies.task_queue_factory.get());
+            });
 #endif
+  } else {
+
+#if defined(_WIN32)
+    media_dependencies.adm =
+        worker_thread_->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule> >(
+            RTC_FROM_HERE, [&] {
+              return webrtc::CreateWindowsCoreAudioAudioDeviceModule(
+                  dependencies.task_queue_factory.get());
+            });
+#else
+    media_dependencies.adm =
+        worker_thread_->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule> >(
+            RTC_FROM_HERE, [&] {
+              return webrtc::AudioDeviceModule::Create(
+                  audio_layer, dependencies.task_queue_factory.get());
+            });
+#endif
+  }
+
   media_dependencies.audio_encoder_factory =
       webrtc::CreateBuiltinAudioEncoderFactory();
   media_dependencies.audio_decoder_factory =

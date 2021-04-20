@@ -167,6 +167,7 @@ int main(int argc, char* argv[]) {
   rtcm_config.hardware_encoder_only = args.hw_mjpeg_decoder;
 
   rtcm_config.create_data_channel = args.create_data_channel;
+  rtcm_config.nng_audio = args.nng_audio;
 
   rtcm_config.disable_echo_cancellation = args.disable_echo_cancellation;
   rtcm_config.disable_auto_gain_control = args.disable_auto_gain_control;

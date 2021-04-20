@@ -428,6 +428,8 @@ target_sources(momo
     src/nng_sender/nng_sender.cpp
     src/nng_sender/nng_data_manager.cpp
     src/nng_sender/nng_capture.cpp
+    src/nng_sender/nng_audio_device.cpp
+    src/nng_sender/nng_audio_device_module.cpp
   )
   target_include_directories(momo PRIVATE ${NNG_ROOT_DIR}/include)
   target_include_directories(momo PRIVATE ${NNGPP_ROOT_DIR}/include)

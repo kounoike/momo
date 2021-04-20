@@ -186,7 +186,7 @@ void NNGSender::SendAudioDataMessage(
   size_t number_of_channels,
   size_t number_of_frames) {
   std::string topic_header("audio/" + stream_id + "/" + track_id + "/");
-  size_t audio_data_size = number_of_channels * number_of_frames * sample_rate * bits_per_sample / 8;
+  size_t audio_data_size = number_of_channels * number_of_frames * bits_per_sample / 8;
   size_t sz = topic_header.size() + sizeof(int32_t) * 4 + audio_data_size;
   auto nngbuf = nng::make_buffer(sz);
   uint8_t* buf = static_cast<uint8_t*>(nngbuf.data());

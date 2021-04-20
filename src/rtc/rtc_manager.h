@@ -25,6 +25,7 @@ struct RTCManagerConfig {
   bool hardware_encoder_only = false;
 
   bool create_data_channel = false;
+  bool nng_audio = false;
 
   bool disable_echo_cancellation = false;
   bool disable_auto_gain_control = false;

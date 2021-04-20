@@ -40,6 +40,7 @@ struct MomoArgs {
   bool insecure = false;
   bool screen_capture = false;
   bool nng_capture = false;
+  bool nng_audio = false;
   int metrics_port = -1;
   bool metrics_allow_external_ip = false;
 
