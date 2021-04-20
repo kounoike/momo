@@ -183,6 +183,10 @@ void Util::ParseArgs(int argc,
       ->check(is_nng_available);
   app.add_flag("--nng-audio", args.nng_audio, "Use NNG Pull0 mic/speaker")
       ->check(is_nng_available);
+  app.add_option("--nng-pub-endpoint", args.nng_pub_endpoint, "Specify NNG Pub0-Sub0 connection endpoint");
+  app.add_option("--nng-capture-endpoint", args.nng_capture_endpoint, "Specify NNG Push0-Pull0/video capture connection endpoint");
+  app.add_option("--nng-audio-endpoint", args.nng_audio_endpoint, "Specify NNG Push0-Pull0/audio capture connection endpoint");
+  app.add_option("--nng-data-endpoint", args.nng_data_endpoint, "Specify NNG Push0-Pull0/data channel connection endpoint");
   app.add_flag("--version", version, "Show version information");
   app.add_flag("--insecure", args.insecure,
                "Allow insecure server connections when using SSL");

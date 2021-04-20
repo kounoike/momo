@@ -84,7 +84,7 @@ RTCManager::RTCManager(
     media_dependencies.adm =
         worker_thread_->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule> >(
             RTC_FROM_HERE, [&] {
-              return NNGAudioDeviceModule::Create(dependencies.task_queue_factory.get());
+              return NNGAudioDeviceModule::Create(config_.nng_audio_endpoint, dependencies.task_queue_factory.get());
             });
 #endif
   } else {

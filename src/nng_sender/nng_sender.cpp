@@ -5,14 +5,14 @@
 #include <third_party/libyuv/include/libyuv/video_common.h>
 #include <nngpp/protocol/pub0.h>
 
-NNGSender::NNGSender() :
+NNGSender::NNGSender(const std::string& nng_pub_endpoint, const std::string& nng_data_endpoint) :
   socket_(nng::pub::v0::open()),
   video_track_receiver_(this),
   audio_track_receiver_(this),
-  data_manager_(this)
+  data_manager_(nng_data_endpoint, this)
 {
-  socket_.dial("tcp://127.0.0.1:5567", nng::flag::nonblock);
-  std::cout << "NNGSender::ctor" << std::endl;
+  std::cout << "NNGSender::ctor. pub: " << nng_pub_endpoint << " / data: " << nng_data_endpoint << std::endl;
+  socket_.dial(nng_pub_endpoint.c_str(), nng::flag::nonblock);
 }
 
 NNGSender::~NNGSender() {

@@ -11,7 +11,7 @@ class NNGDataManager;
 
 class NNGSender {
  public:
-  NNGSender();
+  NNGSender(const std::string& nng_pub_endpoint, const std::string& nng_data_endpoint);
   ~NNGSender();
 
   class NNGAudioTrackReceiver : public AudioTrackReceiver {

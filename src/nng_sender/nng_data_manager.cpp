@@ -5,8 +5,9 @@
 #include <nngpp/protocol/pull0.h>
 
 
-NNGDataManager::NNGDataManager(NNGSender* sender) : sender_(sender), socket_(nng::pull::v0::open()) {
-  socket_.dial("tcp://127.0.0.1:5570", nng::flag::nonblock);
+NNGDataManager::NNGDataManager(const std::string& nng_data_endpoint, NNGSender* sender)
+    : sender_(sender), socket_(nng::pull::v0::open()) {
+  socket_.dial(nng_data_endpoint.c_str(), nng::flag::nonblock);
 
   receive_thread_.reset(
       new rtc::PlatformThread(ReceiveThread, this,

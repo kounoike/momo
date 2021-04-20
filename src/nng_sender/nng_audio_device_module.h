@@ -7,10 +7,11 @@
 class NNGAudioDeviceModule : public webrtc::AudioDeviceModule {
  public:
   static rtc::scoped_refptr<webrtc::AudioDeviceModule> Create(
+      const std::string& nng_audio_endpoint, 
       webrtc::TaskQueueFactory* task_queue_factory);
   int32_t AttachAudioBuffer();
 
-  NNGAudioDeviceModule(webrtc::TaskQueueFactory* task_queue_factory);
+  NNGAudioDeviceModule(const std::string& nng_audio_endpoint, webrtc::TaskQueueFactory* task_queue_factory);
   ~NNGAudioDeviceModule() override;
 
   // Retrieve the currently utilized audio layer
@@ -109,6 +110,7 @@ class NNGAudioDeviceModule : public webrtc::AudioDeviceModule {
   int GetRecordAudioParameters(webrtc::AudioParameters* params) const override;
 #endif  // WEBRTC_IOS
  private:
+  std::string nng_audio_endpoint_;
   webrtc::TaskQueueFactory* task_queue_factory_;
   bool initialized_ = false;
   std::unique_ptr<NNGAudioDevice> audio_device_;

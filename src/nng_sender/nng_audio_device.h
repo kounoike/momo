@@ -8,7 +8,7 @@
 
 class NNGAudioDevice: public webrtc::AudioDeviceGeneric {
  public:
-  NNGAudioDevice();
+  NNGAudioDevice(const std::string& nng_audio_endpoint);
   ~NNGAudioDevice();
   // Retrieve the currently utilized audio layer
   int32_t ActiveAudioLayer(

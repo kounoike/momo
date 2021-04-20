@@ -33,15 +33,18 @@
   }
 
 NNGAudioDeviceModule::NNGAudioDeviceModule(
+    const std::string& nng_audio_endpoint,
     webrtc::TaskQueueFactory* task_queue_factory)
-    : task_queue_factory_(task_queue_factory) {
+    : nng_audio_endpoint_(nng_audio_endpoint),
+    task_queue_factory_(task_queue_factory) {
   RTC_LOG(INFO) << "Current setting use NNG Audio";
 }
 
 rtc::scoped_refptr<webrtc::AudioDeviceModule> NNGAudioDeviceModule::Create(
+    const std::string& nng_audio_endpoint,
     webrtc::TaskQueueFactory* task_queue_factory) {
   RTC_LOG(INFO) << __FUNCTION__;
-  return new rtc::RefCountedObject<NNGAudioDeviceModule>(task_queue_factory);
+  return new rtc::RefCountedObject<NNGAudioDeviceModule>(nng_audio_endpoint, task_queue_factory);
 }
 
 int32_t NNGAudioDeviceModule::AttachAudioBuffer() {
@@ -71,7 +74,7 @@ int32_t NNGAudioDeviceModule::Init() {
 
   audio_device_buffer_.reset(
       new webrtc::AudioDeviceBuffer(task_queue_factory_));
-  audio_device_.reset(new NNGAudioDevice());
+  audio_device_.reset(new NNGAudioDevice(nng_audio_endpoint_));
   RTC_CHECK(audio_device_);
 
   this->AttachAudioBuffer();

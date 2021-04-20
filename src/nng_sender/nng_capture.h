@@ -8,7 +8,7 @@
 
 class NNGCapture : public ScalableVideoTrackSource {
  public:
-  NNGCapture();
+  NNGCapture(const std::string& nng_capture_endpoint);
   ~NNGCapture();
 
  private:

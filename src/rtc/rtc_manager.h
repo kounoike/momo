@@ -26,6 +26,7 @@ struct RTCManagerConfig {
 
   bool create_data_channel = false;
   bool nng_audio = false;
+  std::string nng_audio_endpoint = "tcp://127.0.0.1:5569";
 
   bool disable_echo_cancellation = false;
   bool disable_auto_gain_control = false;

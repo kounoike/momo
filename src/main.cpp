@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
 
 #if USE_NNG
     if(args.use_nng && args.nng_capture) {
-      rtc::scoped_refptr<NNGCapture> nng_capturer(new rtc::RefCountedObject<NNGCapture>());
+      rtc::scoped_refptr<NNGCapture> nng_capturer(new rtc::RefCountedObject<NNGCapture>(args.nng_capture_endpoint));
       return nng_capturer;
     }
 #endif
@@ -168,6 +168,9 @@ int main(int argc, char* argv[]) {
 
   rtcm_config.create_data_channel = args.create_data_channel;
   rtcm_config.nng_audio = args.nng_audio;
+  std::cout << "nng_audio_endpoint: args: " << args.nng_audio_endpoint << std::endl;
+  rtcm_config.nng_audio_endpoint = args.nng_audio_endpoint;
+  std::cout << "rtcm_config: " << rtcm_config.nng_audio_endpoint << std::endl;
 
   rtcm_config.disable_echo_cancellation = args.disable_echo_cancellation;
   rtcm_config.disable_auto_gain_control = args.disable_auto_gain_control;
@@ -204,7 +207,7 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<NNGSender> nng_sender = nullptr;
   if (args.use_nng) {
     std::cout << "use_nng" << std::endl;
-    nng_sender.reset(new NNGSender());
+    nng_sender.reset(new NNGSender(args.nng_pub_endpoint, args.nng_data_endpoint));
     rtc_manager.reset(new RTCManager(
         std::move(rtcm_config), std::move(capturer), nng_sender->GetVideoTrackReceiver(), nng_sender->GetAudioTrackReceiver()));
   }

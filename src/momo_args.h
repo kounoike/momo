@@ -41,6 +41,10 @@ struct MomoArgs {
   bool screen_capture = false;
   bool nng_capture = false;
   bool nng_audio = false;
+  std::string nng_pub_endpoint = "tcp://127.0.0.1:5567";
+  std::string nng_capture_endpoint = "tcp://127.0.0.1:5568";
+  std::string nng_audio_endpoint = "tcp://127.0.0.1:5569";
+  std::string nng_data_endpoint = "tcp://127.0.0.1:5570";
   int metrics_port = -1;
   bool metrics_allow_external_ip = false;
 

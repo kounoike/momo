@@ -6,8 +6,8 @@
 #include <third_party/libyuv/include/libyuv/convert.h>
 #include <api/video/i420_buffer.h>
 
-NNGCapture::NNGCapture() : socket_(nng::pull::v0::open()) {
-  socket_.dial("tcp://127.0.0.1:5568", nng::flag::nonblock);
+NNGCapture::NNGCapture(const std::string& nng_capture_endpoint) : socket_(nng::pull::v0::open()) {
+  socket_.dial(nng_capture_endpoint.c_str(), nng::flag::nonblock);
 
   receive_thread_.reset(
       new rtc::PlatformThread(ReceiveThread, this,

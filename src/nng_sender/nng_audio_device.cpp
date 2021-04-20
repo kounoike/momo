@@ -9,7 +9,7 @@ const int kPlayoutFixedSampleRate = 8000;
 const size_t kPlayoutNumChannels = 1;
 const size_t kPlayoutBufferSize = kPlayoutFixedSampleRate / 100 * kPlayoutNumChannels * 2;
 
-NNGAudioDevice::NNGAudioDevice() :
+NNGAudioDevice::NNGAudioDevice(const std::string& nng_audio_endpoint) :
   socket_(nng::pull::v0::open()),
   _ptrAudioBuffer(NULL),
   _recordingBuffer(NULL),
@@ -24,8 +24,8 @@ NNGAudioDevice::NNGAudioDevice() :
   _recording(false),
   _lastCallPlayoutMillis(0),
   _lastCallRecordMillis(0) {
-  socket_.dial("tcp://127.0.0.1:5569", nng::flag::nonblock);
-  std::cout << "NNGAudioDevice ctor." << std::endl;
+  std::cout << "NNGAudioDevice ctor. endpoint: " << nng_audio_endpoint << std::endl;
+  socket_.dial(nng_audio_endpoint.c_str(), nng::flag::nonblock);
 
   receive_thread_.reset(
     new rtc::PlatformThread(ReceiveThread, this, "NNGAudioReceiveThread", rtc::kNormalPriority));
@@ -45,7 +45,7 @@ void NNGAudioDevice::ReceiveThread(void* obj) {
 void NNGAudioDevice::ReceiveProcess() {
   while(true) {
     nng::buffer buf = socket_.recv();
-    std::cout << "NNG Audio Device NNGmessage received size: " << buf.size() << " recording: " << (_recording ? "true": "false") << std::endl;
+    // std::cout << "NNG Audio Device NNGmessage received size: " << buf.size() << " recording: " << (_recording ? "true": "false") << std::endl;
     uint8_t *data = static_cast<uint8_t*>(buf.data());
     int32_t bits_per_sample = static_cast<int32_t>((data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3]);
     int32_t sample_rate = static_cast<int32_t>((data[4] << 24) | (data[5] << 16) | (data[6] << 8) | data[7]);
@@ -58,14 +58,14 @@ void NNGAudioDevice::ReceiveProcess() {
     recording_sampling_rate_ = sample_rate;
     recording_bits_per_sample_ = bits_per_sample;
     recording_number_of_channels_ = number_of_channels;
-    std::cout << "Call InitRecording" << std::endl;
+    // std::cout << "Call InitRecording" << std::endl;
     InitRecording();
-    std::cout << "done." << std::endl;
+    // std::cout << "done." << std::endl;
     message_received_ = true;
 
     if (_recording) {
       size_t copied_data_size = 0;
-      std::cout << "copy start" << std::endl;
+      // std::cout << "copy start" << std::endl;
       _mutex.Lock();
       while(_recording && copied_data_size != audio_data_size) {
         if (_recordingBufferSizeIn10MS - _writtenBufferSize <=
@@ -88,7 +88,7 @@ void NNGAudioDevice::ReceiveProcess() {
         }
       }
       _mutex.Unlock();
-      std::cout << "while loop out." << std::endl;
+      // std::cout << "while loop out." << std::endl;
     }
   }
 }

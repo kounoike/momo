@@ -11,7 +11,7 @@ class NNGSender;
 
 class NNGDataManager : public RTCDataManager {
  public:
- NNGDataManager(NNGSender* sender);
+ NNGDataManager(const std::string& nng_data_endpoint, NNGSender* sender);
   ~NNGDataManager();
 
   void Send(const uint8_t* data, size_t length);
