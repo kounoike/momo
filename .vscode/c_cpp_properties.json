@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/src/**",
+                "${workspaceFolder}/NvCodec/**",
+                "/tool/webrtc/host/include/**",
+                "/tool/boost/host/include",
+                "/tool/CLI11/include",
+                "/tool/webrtc/host/include/third_party/boringssl/src/include/",
+                "/tool/rootfs/raspberry-pi-os_armv7/opt/vc/include",
+                "/tool/rootfs/ubuntu-18.04_armv8_jetson_nano/usr/src/jetson_multimedia_api/include"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/clang++-10",
+            "cStandard": "c99",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "linux-clang-x64"
+        }
+    ],
+    "version": 4
+}
