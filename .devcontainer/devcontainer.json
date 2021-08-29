@@ -1,20 +1,6 @@
 {
 	"name": "C++",
 	"image": "momo_builder:cross-18.04",
-	// "build": {
-	// 	"dockerfile": "../build/ubuntu-20.04_x86_64/Dockerfile",
-	// 	"context": "..",
-	// 	// Update 'VARIANT' to pick an Debian / Ubuntu OS version: debian-11, debian-10, debian-9, ubuntu-20.04, ubuntu-18.04
-	// 	"args": {
-	// 		"VARIANT": "ubuntu-20.04",
-	// 		"WEBRTC_BUILD_VERSION": "92.4515.9.2",
-	// 		"BOOST_VERSION": "1.76.0",
-	// 		"CLI11_VERSION": "2.0.0",
-	// 		"SDL2_VERSION": "2.0.14",
-	// 		"CMAKE_VERSION": "3.21.1",
-	// 		"CUDA_VERSION": "11.0.2-1"
-	// 	}
-	// },
 	"runArgs": [ "--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined"],
 
 	// Set *default* container specific settings.json values on container create.
@@ -24,15 +10,13 @@
 	"extensions": [
 		"ms-vscode.cpptools",
 		"twxs.cmake"
-        // "ms-vscode.cmake-tools"
 	],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [3000],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// persistence $HOME/.cache (bazel cache directory)
-	// "postCreateCommand": "ln -sf $(pwd)/build_cache ${HOME}/.cache",
+	// "postCreateCommand": "",
 
 	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "vscode"
