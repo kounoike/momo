@@ -63,9 +63,11 @@ RUN sed -e 's/Apt::Get::AllowUnauthenticated=true/Apt::Get::AllowUnauthenticated
 # ARM FS
 # RUN wget http://archive.raspbian.org/raspbian.public.key -O - | apt-key add -
 COPY script/init_rootfs_arm*.sh /tool/
-COPY rpi-os-armv*.conf /tool/
+COPY rpi-os-armv6.conf /tool/
 RUN /tool/init_rootfs_armhf.sh /tool/rootfs/raspberry-pi-os_armv6 /tool/rpi-os-armv6.conf
+COPY rpi-os-armv7.conf /tool/
 RUN /tool/init_rootfs_armhf.sh /tool/rootfs/raspberry-pi-os_armv7 /tool/rpi-os-armv7.conf
+COPY rpi-os-armv8.conf /tool/
 RUN /tool/init_rootfs_arm64.sh /tool/rootfs/raspberry-pi-os_armv8 /tool/rpi-os-armv8.conf
 
 COPY jetson_*.conf /tool/
@@ -108,27 +110,27 @@ WORKDIR /tool/boost_source
 RUN ./bootstrap.sh
 RUN echo 'using clang : : /tool/llvm/clang/bin/clang++ : ;' > project-config.jam
 RUN ./b2 \
-    cxxflags=' \
-      -D_LIBCPP_ABI_UNSTABLE \
-      -D_LIBCPP_DISABLE_AVAILABILITY \
-      -nostdinc++ \
-      -isystem/tool/llvm/libcxx/include \
-    ' \
-    linkflags=' \
-    ' \
-    toolset=clang \
-    visibility=global \
-    target-os=linux \
-    address-model=64 \
-    link=static \
-    variant=release \
-    install \
-    -j`nproc` \
-    --ignore-site-config \
-    --prefix=/tool/boost/host \
-    --build-dir=/tool/build/boost/host \
-    --with-filesystem \
-    --with-json
+  cxxflags=' \
+  -D_LIBCPP_ABI_UNSTABLE \
+  -D_LIBCPP_DISABLE_AVAILABILITY \
+  -nostdinc++ \
+  -isystem/tool/llvm/libcxx/include \
+  ' \
+  linkflags=' \
+  ' \
+  toolset=clang \
+  visibility=global \
+  target-os=linux \
+  address-model=64 \
+  link=static \
+  variant=release \
+  install \
+  -j`nproc` \
+  --ignore-site-config \
+  --prefix=/tool/boost/host \
+  --build-dir=/tool/build/boost/host \
+  --with-filesystem \
+  --with-json
 
 FROM host_boost_builder AS cross_boost_builder
 COPY --from=rootfs /tool/rootfs /tool/rootfs
@@ -137,161 +139,161 @@ COPY --from=rootfs /tool/rootfs /tool/rootfs
 RUN ./bootstrap.sh
 RUN echo 'using clang : : /tool/llvm/clang/bin/clang++ : ;' > project-config.jam
 RUN ./b2 \
-    cxxflags=' \
-      -D_LIBCPP_ABI_UNSTABLE \
-      -D_LIBCPP_DISABLE_AVAILABILITY \
-      -nostdinc++ \
-      -isystem/tool/llvm/libcxx/include \
-      --target=arm-linux-gnueabihf \
-      --sysroot=/tool/rootfs/raspberry-pi-os_armv6 \
-      -I/tool/rootfs/raspberry-pi-os_armv6/usr/include/arm-linux-gnueabihf \
-    ' \
-    linkflags=' \
-      -L/tool/rootfs/raspberry-pi-os_armv6/usr/lib/arm-linux-gnueabihf \
-      -B/tool/rootfs/raspberry-pi-os_armv6/usr/lib/arm-linux-gnueabihf \
-    ' \
-    toolset=clang \
-    visibility=global \
-    target-os=linux \
-    architecture=arm \
-    address-model=32 \
-    link=static \
-    variant=release \
-    install \
-    -j`nproc` \
-    --ignore-site-config \
-    --prefix=/tool/boost/raspberry-pi-os_armv6 \
-    --build-dir=/tool/build/boost/raspberry-pi-os_armv6 \
-    --with-filesystem \
-    --with-json
+  cxxflags=' \
+  -D_LIBCPP_ABI_UNSTABLE \
+  -D_LIBCPP_DISABLE_AVAILABILITY \
+  -nostdinc++ \
+  -isystem/tool/llvm/libcxx/include \
+  --target=arm-linux-gnueabihf \
+  --sysroot=/tool/rootfs/raspberry-pi-os_armv6 \
+  -I/tool/rootfs/raspberry-pi-os_armv6/usr/include/arm-linux-gnueabihf \
+  ' \
+  linkflags=' \
+  -L/tool/rootfs/raspberry-pi-os_armv6/usr/lib/arm-linux-gnueabihf \
+  -B/tool/rootfs/raspberry-pi-os_armv6/usr/lib/arm-linux-gnueabihf \
+  ' \
+  toolset=clang \
+  visibility=global \
+  target-os=linux \
+  architecture=arm \
+  address-model=32 \
+  link=static \
+  variant=release \
+  install \
+  -j`nproc` \
+  --ignore-site-config \
+  --prefix=/tool/boost/raspberry-pi-os_armv6 \
+  --build-dir=/tool/build/boost/raspberry-pi-os_armv6 \
+  --with-filesystem \
+  --with-json
 
 ## raspberry-pi-os_armv7
 RUN ./bootstrap.sh
 RUN echo 'using clang : : /tool/llvm/clang/bin/clang++ : ;' > project-config.jam
 RUN ./b2 \
-    cxxflags=' \
-      -D_LIBCPP_ABI_UNSTABLE \
-      -D_LIBCPP_DISABLE_AVAILABILITY \
-      -nostdinc++ \
-      -isystem/tool/llvm/libcxx/include \
-      --target=arm-linux-gnueabihf \
-      --sysroot=/tool/rootfs/raspberry-pi-os_armv7 \
-      -I/tool/rootfs/raspberry-pi-os_armv7/usr/include/arm-linux-gnueabihf \
-    ' \
-    linkflags=' \
-      -L/tool/rootfs/raspberry-pi-os_armv7/usr/lib/arm-linux-gnueabihf \
-      -B/tool/rootfs/raspberry-pi-os_armv7/usr/lib/arm-linux-gnueabihf \
-    ' \
-    toolset=clang \
-    visibility=global \
-    target-os=linux \
-    architecture=arm \
-    address-model=32 \
-    link=static \
-    variant=release \
-    install \
-    -j`nproc` \
-    --ignore-site-config \
-    --prefix=/tool/boost/raspberry-pi-os_armv7 \
-    --build-dir=/tool/build/boost/raspberry-pi-os_armv7 \
-    --with-filesystem \
-    --with-json
+  cxxflags=' \
+  -D_LIBCPP_ABI_UNSTABLE \
+  -D_LIBCPP_DISABLE_AVAILABILITY \
+  -nostdinc++ \
+  -isystem/tool/llvm/libcxx/include \
+  --target=arm-linux-gnueabihf \
+  --sysroot=/tool/rootfs/raspberry-pi-os_armv7 \
+  -I/tool/rootfs/raspberry-pi-os_armv7/usr/include/arm-linux-gnueabihf \
+  ' \
+  linkflags=' \
+  -L/tool/rootfs/raspberry-pi-os_armv7/usr/lib/arm-linux-gnueabihf \
+  -B/tool/rootfs/raspberry-pi-os_armv7/usr/lib/arm-linux-gnueabihf \
+  ' \
+  toolset=clang \
+  visibility=global \
+  target-os=linux \
+  architecture=arm \
+  address-model=32 \
+  link=static \
+  variant=release \
+  install \
+  -j`nproc` \
+  --ignore-site-config \
+  --prefix=/tool/boost/raspberry-pi-os_armv7 \
+  --build-dir=/tool/build/boost/raspberry-pi-os_armv7 \
+  --with-filesystem \
+  --with-json
 
 ## raspberry-pi-os_armv8
 RUN ./bootstrap.sh
 RUN echo 'using clang : : /tool/llvm/clang/bin/clang++ : ;' > project-config.jam
 RUN ./b2 \
-    cxxflags=' \
-      -D_LIBCPP_ABI_UNSTABLE \
-      -D_LIBCPP_DISABLE_AVAILABILITY \
-      -nostdinc++ \
-      -isystem/tool/llvm/libcxx/include \
-      --target=aarch64-linux-gnu \
-      --sysroot=/tool/rootfs/raspberry-pi-os_armv8 \
-      -I/tool/rootfs/raspberry-pi-os_armv8/usr/include/aarch64-linux-gnu \
-    ' \
-    linkflags=' \
-      -L/tool/rootfs/raspberry-pi-os_armv8/usr/lib/aarch64-linux-gnu \
-      -B/tool/rootfs/raspberry-pi-os_armv8/usr/lib/aarch64-linux-gnu \
-    ' \
-    toolset=clang \
-    visibility=global \
-    target-os=linux \
-    architecture=arm \
-    address-model=64 \
-    link=static \
-    variant=release \
-    install \
-    -j`nproc` \
-    --ignore-site-config \
-    --prefix=/tool/boost/raspberry-pi-os_armv8 \
-    --build-dir=/tool/build/boost/raspberry-pi-os_armv8 \
-    --with-filesystem \
-    --with-json
+  cxxflags=' \
+  -D_LIBCPP_ABI_UNSTABLE \
+  -D_LIBCPP_DISABLE_AVAILABILITY \
+  -nostdinc++ \
+  -isystem/tool/llvm/libcxx/include \
+  --target=aarch64-linux-gnu \
+  --sysroot=/tool/rootfs/raspberry-pi-os_armv8 \
+  -I/tool/rootfs/raspberry-pi-os_armv8/usr/include/aarch64-linux-gnu \
+  ' \
+  linkflags=' \
+  -L/tool/rootfs/raspberry-pi-os_armv8/usr/lib/aarch64-linux-gnu \
+  -B/tool/rootfs/raspberry-pi-os_armv8/usr/lib/aarch64-linux-gnu \
+  ' \
+  toolset=clang \
+  visibility=global \
+  target-os=linux \
+  architecture=arm \
+  address-model=64 \
+  link=static \
+  variant=release \
+  install \
+  -j`nproc` \
+  --ignore-site-config \
+  --prefix=/tool/boost/raspberry-pi-os_armv8 \
+  --build-dir=/tool/build/boost/raspberry-pi-os_armv8 \
+  --with-filesystem \
+  --with-json
 
 ## ubuntu-18.04_armv8_jetson_nano
 RUN ./bootstrap.sh
 RUN echo 'using clang : : /tool/llvm/clang/bin/clang++ : ;' > project-config.jam
 RUN ./b2 \
-    cxxflags=' \
-      -D_LIBCPP_ABI_UNSTABLE \
-      -D_LIBCPP_DISABLE_AVAILABILITY \
-      -nostdinc++ \
-      -isystem/tool/llvm/libcxx/include \
-      --target=aarch64-linux-gnu \
-      --sysroot=/tool/rootfs/ubuntu-18.04_armv8_jetson_nano \
-      -I/tool/rootfs/ubuntu-18.04_armv8_jetson_nano/usr/include/aarch64-linux-gnu \
-    ' \
-    linkflags=' \
-      -L/tool/rootfs/ubuntu-18.04_armv8_jetson_nano/usr/lib/aarch64-linux-gnu \
-      -B/tool/rootfs/ubuntu-18.04_armv8_jetson_nano/usr/lib/aarch64-linux-gnu \
-    ' \
-    toolset=clang \
-    visibility=global \
-    target-os=linux \
-    architecture=arm \
-    address-model=64 \
-    link=static \
-    variant=release \
-    install \
-    -j`nproc` \
-    --ignore-site-config \
-    --prefix=/tool/boost/ubuntu-18.04_armv8_jetson_nano \
-    --build-dir=/tool/build/boost/ubuntu-18.04_armv8_jetson_nano \
-    --with-filesystem \
-    --with-json
+  cxxflags=' \
+  -D_LIBCPP_ABI_UNSTABLE \
+  -D_LIBCPP_DISABLE_AVAILABILITY \
+  -nostdinc++ \
+  -isystem/tool/llvm/libcxx/include \
+  --target=aarch64-linux-gnu \
+  --sysroot=/tool/rootfs/ubuntu-18.04_armv8_jetson_nano \
+  -I/tool/rootfs/ubuntu-18.04_armv8_jetson_nano/usr/include/aarch64-linux-gnu \
+  ' \
+  linkflags=' \
+  -L/tool/rootfs/ubuntu-18.04_armv8_jetson_nano/usr/lib/aarch64-linux-gnu \
+  -B/tool/rootfs/ubuntu-18.04_armv8_jetson_nano/usr/lib/aarch64-linux-gnu \
+  ' \
+  toolset=clang \
+  visibility=global \
+  target-os=linux \
+  architecture=arm \
+  address-model=64 \
+  link=static \
+  variant=release \
+  install \
+  -j`nproc` \
+  --ignore-site-config \
+  --prefix=/tool/boost/ubuntu-18.04_armv8_jetson_nano \
+  --build-dir=/tool/build/boost/ubuntu-18.04_armv8_jetson_nano \
+  --with-filesystem \
+  --with-json
 
 ## ubuntu-18.04_armv8_jetson_xavier
 RUN ./bootstrap.sh
 RUN echo 'using clang : : /tool/llvm/clang/bin/clang++ : ;' > project-config.jam
 RUN ./b2 \
-    cxxflags=' \
-      -D_LIBCPP_ABI_UNSTABLE \
-      -D_LIBCPP_DISABLE_AVAILABILITY \
-      -nostdinc++ \
-      -isystem/tool/llvm/libcxx/include \
-      --target=aarch64-linux-gnu \
-      --sysroot=/tool/rootfs/ubuntu-18.04_armv8_jetson_xavier \
-      -I/tool/rootfs/ubuntu-18.04_armv8_jetson_xavier/usr/include/aarch64-linux-gnu \
-    ' \
-    linkflags=' \
-      -L/tool/rootfs/ubuntu-18.04_armv8_jetson_xavier/usr/lib/aarch64-linux-gnu \
-      -B/tool/rootfs/ubuntu-18.04_armv8_jetson_xavier/usr/lib/aarch64-linux-gnu \
-    ' \
-    toolset=clang \
-    visibility=global \
-    target-os=linux \
-    architecture=arm \
-    address-model=64 \
-    link=static \
-    variant=release \
-    install \
-    -j`nproc` \
-    --ignore-site-config \
-    --prefix=/tool/boost/ubuntu-18.04_armv8_jetson_xavier \
-    --build-dir=/tool/build/boost/ubuntu-18.04_armv8_jetson_xavier \
-    --with-filesystem \
-    --with-json
+  cxxflags=' \
+  -D_LIBCPP_ABI_UNSTABLE \
+  -D_LIBCPP_DISABLE_AVAILABILITY \
+  -nostdinc++ \
+  -isystem/tool/llvm/libcxx/include \
+  --target=aarch64-linux-gnu \
+  --sysroot=/tool/rootfs/ubuntu-18.04_armv8_jetson_xavier \
+  -I/tool/rootfs/ubuntu-18.04_armv8_jetson_xavier/usr/include/aarch64-linux-gnu \
+  ' \
+  linkflags=' \
+  -L/tool/rootfs/ubuntu-18.04_armv8_jetson_xavier/usr/lib/aarch64-linux-gnu \
+  -B/tool/rootfs/ubuntu-18.04_armv8_jetson_xavier/usr/lib/aarch64-linux-gnu \
+  ' \
+  toolset=clang \
+  visibility=global \
+  target-os=linux \
+  architecture=arm \
+  address-model=64 \
+  link=static \
+  variant=release \
+  install \
+  -j`nproc` \
+  --ignore-site-config \
+  --prefix=/tool/boost/ubuntu-18.04_armv8_jetson_xavier \
+  --build-dir=/tool/build/boost/ubuntu-18.04_armv8_jetson_xavier \
+  --with-filesystem \
+  --with-json
 
 
 # CLI11 の取得
@@ -312,45 +314,45 @@ RUN curl -fsqSL http://www.libsdl.org/release/SDL2-$SDL2_VERSION.tar.gz | \
 ## host
 WORKDIR /tool/source/sdl2/build/host
 RUN cmake ../.. \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=/tool/SDL2/host \
-    -DCMAKE_C_COMPILER=/tool/llvm/clang/bin/clang \
-    -DCMAKE_CXX_COMPILER=/tool/llvm/clang/bin/clang++ \
-    -DBUILD_SHARED_LIBS=OFF \
-    -DSDL_ATOMIC=OFF \
-    -DSDL_AUDIO=OFF \
-    -DSDL_VIDEO=ON \
-    -DSDL_RENDER=ON \
-    -DSDL_EVENTS=ON \
-    -DSDL_JOYSTICK=ON \
-    -DSDL_HAPTIC=ON \
-    -DSDL_POWER=ON \
-    -DSDL_THREADS=ON \
-    -DSDL_TIMERS=OFF \
-    -DSDL_FILE=OFF \
-    -DSDL_LOADSO=ON \
-    -DSDL_CPUINFO=OFF \
-    -DSDL_FILESYSTEM=OFF \
-    -DSDL_DLOPEN=ON \
-    -DSDL_SENSOR=ON \
-    -DVIDEO_OPENGL=ON \
-    -DVIDEO_OPENGLES=ON \
-    -DVIDEO_RPI=OFF \
-    -DVIDEO_WAYLAND=OFF \
-    -DVIDEO_X11=ON \
-    -DX11_SHARED=OFF \
-    -DVIDEO_X11_XCURSOR=OFF \
-    -DVIDEO_X11_XINERAMA=OFF \
-    -DVIDEO_X11_XINPUT=OFF \
-    -DVIDEO_X11_XRANDR=OFF \
-    -DVIDEO_X11_XSCRNSAVER=OFF \
-    -DVIDEO_X11_XSHAPE=OFF \
-    -DVIDEO_X11_XVM=OFF \
-    -DVIDEO_VULKAN=OFF \
-    -DVIDEO_VIVANTE=OFF \
-    -DVIDEO_COCOA=OFF \
-    -DVIDEO_METAL=OFF \
-    -DVIDEO_KMSDRM=OFF
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=/tool/SDL2/host \
+  -DCMAKE_C_COMPILER=/tool/llvm/clang/bin/clang \
+  -DCMAKE_CXX_COMPILER=/tool/llvm/clang/bin/clang++ \
+  -DBUILD_SHARED_LIBS=OFF \
+  -DSDL_ATOMIC=OFF \
+  -DSDL_AUDIO=OFF \
+  -DSDL_VIDEO=ON \
+  -DSDL_RENDER=ON \
+  -DSDL_EVENTS=ON \
+  -DSDL_JOYSTICK=ON \
+  -DSDL_HAPTIC=ON \
+  -DSDL_POWER=ON \
+  -DSDL_THREADS=ON \
+  -DSDL_TIMERS=OFF \
+  -DSDL_FILE=OFF \
+  -DSDL_LOADSO=ON \
+  -DSDL_CPUINFO=OFF \
+  -DSDL_FILESYSTEM=OFF \
+  -DSDL_DLOPEN=ON \
+  -DSDL_SENSOR=ON \
+  -DVIDEO_OPENGL=ON \
+  -DVIDEO_OPENGLES=ON \
+  -DVIDEO_RPI=OFF \
+  -DVIDEO_WAYLAND=OFF \
+  -DVIDEO_X11=ON \
+  -DX11_SHARED=OFF \
+  -DVIDEO_X11_XCURSOR=OFF \
+  -DVIDEO_X11_XINERAMA=OFF \
+  -DVIDEO_X11_XINPUT=OFF \
+  -DVIDEO_X11_XRANDR=OFF \
+  -DVIDEO_X11_XSCRNSAVER=OFF \
+  -DVIDEO_X11_XSHAPE=OFF \
+  -DVIDEO_X11_XVM=OFF \
+  -DVIDEO_VULKAN=OFF \
+  -DVIDEO_VIVANTE=OFF \
+  -DVIDEO_COCOA=OFF \
+  -DVIDEO_METAL=OFF \
+  -DVIDEO_KMSDRM=OFF
 RUN cmake --build . -j$(nproc)
 RUN cmake --install .
 
@@ -360,165 +362,165 @@ COPY --from=rootfs /tool/rootfs /tool/rootfs
 ## raspberry-pi-os_armv7
 WORKDIR /tool/source/sdl2/build/raspberry-pi-os_armv7
 RUN cmake ../.. \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=/tool/SDL2/raspberry-pi-os_armv7 \
-    -DCMAKE_SYSTEM_NAME=Linux \
-    -DCMAKE_SYSTEM_PROCESSOR=arm \
-    -DCMAKE_C_COMPILER=/tool/llvm/clang/bin/clang \
-    -DCMAKE_C_COMPILER_TARGET=arm-linux-gnueabihf \
-    -DCMAKE_CXX_COMPILER=/tool/llvm/clang/bin/clang++ \
-    -DCMAKE_CXX_COMPILER_TARGET=arm-linux-gnueabihf \
-    -DCMAKE_FIND_ROOT_PATH=/tool/rootfs/raspberry-pi-os_armv7 \
-    -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-    -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH \
-    -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH \
-    -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH \
-    -DCMAKE_SYSROOT=/tool/rootfs/raspberry-pi-os_armv7 \
-    -DBUILD_SHARED_LIBS=OFF \
-    -DSDL_ATOMIC=OFF \
-    -DSDL_AUDIO=OFF \
-    -DSDL_VIDEO=ON \
-    -DSDL_RENDER=ON \
-    -DSDL_EVENTS=ON \
-    -DSDL_JOYSTICK=ON \
-    -DSDL_HAPTIC=ON \
-    -DSDL_POWER=ON \
-    -DSDL_THREADS=ON \
-    -DSDL_TIMERS=OFF \
-    -DSDL_FILE=OFF \
-    -DSDL_LOADSO=ON \
-    -DSDL_CPUINFO=OFF \
-    -DSDL_FILESYSTEM=OFF \
-    -DSDL_DLOPEN=ON \
-    -DSDL_SENSOR=ON \
-    -DVIDEO_OPENGL=ON \
-    -DVIDEO_OPENGLES=ON \
-    -DVIDEO_RPI=OFF \
-    -DVIDEO_WAYLAND=OFF \
-    -DVIDEO_X11=ON \
-    -DX11_SHARED=OFF \
-    -DVIDEO_X11_XCURSOR=OFF \
-    -DVIDEO_X11_XINERAMA=OFF \
-    -DVIDEO_X11_XINPUT=OFF \
-    -DVIDEO_X11_XRANDR=OFF \
-    -DVIDEO_X11_XSCRNSAVER=OFF \
-    -DVIDEO_X11_XSHAPE=OFF \
-    -DVIDEO_X11_XVM=OFF \
-    -DVIDEO_VULKAN=OFF \
-    -DVIDEO_VIVANTE=OFF \
-    -DVIDEO_COCOA=OFF \
-    -DVIDEO_METAL=OFF \
-    -DVIDEO_KMSDRM=OFF
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=/tool/SDL2/raspberry-pi-os_armv7 \
+  -DCMAKE_SYSTEM_NAME=Linux \
+  -DCMAKE_SYSTEM_PROCESSOR=arm \
+  -DCMAKE_C_COMPILER=/tool/llvm/clang/bin/clang \
+  -DCMAKE_C_COMPILER_TARGET=arm-linux-gnueabihf \
+  -DCMAKE_CXX_COMPILER=/tool/llvm/clang/bin/clang++ \
+  -DCMAKE_CXX_COMPILER_TARGET=arm-linux-gnueabihf \
+  -DCMAKE_FIND_ROOT_PATH=/tool/rootfs/raspberry-pi-os_armv7 \
+  -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+  -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH \
+  -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH \
+  -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH \
+  -DCMAKE_SYSROOT=/tool/rootfs/raspberry-pi-os_armv7 \
+  -DBUILD_SHARED_LIBS=OFF \
+  -DSDL_ATOMIC=OFF \
+  -DSDL_AUDIO=OFF \
+  -DSDL_VIDEO=ON \
+  -DSDL_RENDER=ON \
+  -DSDL_EVENTS=ON \
+  -DSDL_JOYSTICK=ON \
+  -DSDL_HAPTIC=ON \
+  -DSDL_POWER=ON \
+  -DSDL_THREADS=ON \
+  -DSDL_TIMERS=OFF \
+  -DSDL_FILE=OFF \
+  -DSDL_LOADSO=ON \
+  -DSDL_CPUINFO=OFF \
+  -DSDL_FILESYSTEM=OFF \
+  -DSDL_DLOPEN=ON \
+  -DSDL_SENSOR=ON \
+  -DVIDEO_OPENGL=ON \
+  -DVIDEO_OPENGLES=ON \
+  -DVIDEO_RPI=OFF \
+  -DVIDEO_WAYLAND=OFF \
+  -DVIDEO_X11=ON \
+  -DX11_SHARED=OFF \
+  -DVIDEO_X11_XCURSOR=OFF \
+  -DVIDEO_X11_XINERAMA=OFF \
+  -DVIDEO_X11_XINPUT=OFF \
+  -DVIDEO_X11_XRANDR=OFF \
+  -DVIDEO_X11_XSCRNSAVER=OFF \
+  -DVIDEO_X11_XSHAPE=OFF \
+  -DVIDEO_X11_XVM=OFF \
+  -DVIDEO_VULKAN=OFF \
+  -DVIDEO_VIVANTE=OFF \
+  -DVIDEO_COCOA=OFF \
+  -DVIDEO_METAL=OFF \
+  -DVIDEO_KMSDRM=OFF
 RUN cmake --build . -j$(nproc)
 RUN cmake --install .
 
 ## ubuntu-18.04_armv8_jetson_nano
 WORKDIR /tool/source/sdl2/build/ubuntu-18.04_armv8_jetson_nano
 RUN cmake ../.. \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=/tool/SDL2/ubuntu-18.04_armv8_jetson_nano \
-    -DCMAKE_SYSTEM_NAME=Linux \
-    -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-    -DCMAKE_C_COMPILER=/tool/llvm/clang/bin/clang \
-    -DCMAKE_C_COMPILER_TARGET=aarch64-linux-gnu \
-    -DCMAKE_CXX_COMPILER=/tool/llvm/clang/bin/clang++ \
-    -DCMAKE_CXX_COMPILER_TARGET=aarch64-linux-gnu \
-    -DCMAKE_FIND_ROOT_PATH=/tool/rootfs/ubuntu-18.04_armv8_jetson_nano \
-    -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-    -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH \
-    -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH \
-    -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH \
-    -DCMAKE_SYSROOT=/tool/rootfs/ubuntu-18.04_armv8_jetson_nano \
-    -DBUILD_SHARED_LIBS=OFF \
-    -DSDL_ATOMIC=OFF \
-    -DSDL_AUDIO=OFF \
-    -DSDL_VIDEO=ON \
-    -DSDL_RENDER=ON \
-    -DSDL_EVENTS=ON \
-    -DSDL_JOYSTICK=ON \
-    -DSDL_HAPTIC=ON \
-    -DSDL_POWER=ON \
-    -DSDL_THREADS=ON \
-    -DSDL_TIMERS=OFF \
-    -DSDL_FILE=OFF \
-    -DSDL_LOADSO=ON \
-    -DSDL_CPUINFO=OFF \
-    -DSDL_FILESYSTEM=OFF \
-    -DSDL_DLOPEN=ON \
-    -DSDL_SENSOR=ON \
-    -DVIDEO_OPENGL=ON \
-    -DVIDEO_OPENGLES=ON \
-    -DVIDEO_RPI=OFF \
-    -DVIDEO_WAYLAND=OFF \
-    -DVIDEO_X11=ON \
-    -DX11_SHARED=OFF \
-    -DVIDEO_X11_XCURSOR=OFF \
-    -DVIDEO_X11_XINERAMA=OFF \
-    -DVIDEO_X11_XINPUT=OFF \
-    -DVIDEO_X11_XRANDR=OFF \
-    -DVIDEO_X11_XSCRNSAVER=OFF \
-    -DVIDEO_X11_XSHAPE=OFF \
-    -DVIDEO_X11_XVM=OFF \
-    -DVIDEO_VULKAN=OFF \
-    -DVIDEO_VIVANTE=OFF \
-    -DVIDEO_COCOA=OFF \
-    -DVIDEO_METAL=OFF \
-    -DVIDEO_KMSDRM=OFF
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=/tool/SDL2/ubuntu-18.04_armv8_jetson_nano \
+  -DCMAKE_SYSTEM_NAME=Linux \
+  -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+  -DCMAKE_C_COMPILER=/tool/llvm/clang/bin/clang \
+  -DCMAKE_C_COMPILER_TARGET=aarch64-linux-gnu \
+  -DCMAKE_CXX_COMPILER=/tool/llvm/clang/bin/clang++ \
+  -DCMAKE_CXX_COMPILER_TARGET=aarch64-linux-gnu \
+  -DCMAKE_FIND_ROOT_PATH=/tool/rootfs/ubuntu-18.04_armv8_jetson_nano \
+  -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+  -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH \
+  -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH \
+  -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH \
+  -DCMAKE_SYSROOT=/tool/rootfs/ubuntu-18.04_armv8_jetson_nano \
+  -DBUILD_SHARED_LIBS=OFF \
+  -DSDL_ATOMIC=OFF \
+  -DSDL_AUDIO=OFF \
+  -DSDL_VIDEO=ON \
+  -DSDL_RENDER=ON \
+  -DSDL_EVENTS=ON \
+  -DSDL_JOYSTICK=ON \
+  -DSDL_HAPTIC=ON \
+  -DSDL_POWER=ON \
+  -DSDL_THREADS=ON \
+  -DSDL_TIMERS=OFF \
+  -DSDL_FILE=OFF \
+  -DSDL_LOADSO=ON \
+  -DSDL_CPUINFO=OFF \
+  -DSDL_FILESYSTEM=OFF \
+  -DSDL_DLOPEN=ON \
+  -DSDL_SENSOR=ON \
+  -DVIDEO_OPENGL=ON \
+  -DVIDEO_OPENGLES=ON \
+  -DVIDEO_RPI=OFF \
+  -DVIDEO_WAYLAND=OFF \
+  -DVIDEO_X11=ON \
+  -DX11_SHARED=OFF \
+  -DVIDEO_X11_XCURSOR=OFF \
+  -DVIDEO_X11_XINERAMA=OFF \
+  -DVIDEO_X11_XINPUT=OFF \
+  -DVIDEO_X11_XRANDR=OFF \
+  -DVIDEO_X11_XSCRNSAVER=OFF \
+  -DVIDEO_X11_XSHAPE=OFF \
+  -DVIDEO_X11_XVM=OFF \
+  -DVIDEO_VULKAN=OFF \
+  -DVIDEO_VIVANTE=OFF \
+  -DVIDEO_COCOA=OFF \
+  -DVIDEO_METAL=OFF \
+  -DVIDEO_KMSDRM=OFF
 RUN cmake --build . -j$(nproc)
 RUN cmake --install .
 
 ## jetson_xavier
 WORKDIR /tool/source/sdl2/build/ubuntu-18.04_armv8_jetson_xavier
 RUN cmake ../.. \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=/tool/SDL2/ubuntu-18.04_armv8_jetson_xavier \
-    -DCMAKE_SYSTEM_NAME=Linux \
-    -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-    -DCMAKE_C_COMPILER=/tool/llvm/clang/bin/clang \
-    -DCMAKE_C_COMPILER_TARGET=aarch64-linux-gnu \
-    -DCMAKE_CXX_COMPILER=/tool/llvm/clang/bin/clang++ \
-    -DCMAKE_CXX_COMPILER_TARGET=aarch64-linux-gnu \
-    -DCMAKE_FIND_ROOT_PATH=/tool/rootfs/ubuntu-18.04_armv8_jetson_xavier \
-    -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-    -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH \
-    -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH \
-    -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH \
-    -DCMAKE_SYSROOT=/tool/rootfs/ubuntu-18.04_armv8_jetson_xavier \
-    -DBUILD_SHARED_LIBS=OFF \
-    -DSDL_ATOMIC=OFF \
-    -DSDL_AUDIO=OFF \
-    -DSDL_VIDEO=ON \
-    -DSDL_RENDER=ON \
-    -DSDL_EVENTS=ON \
-    -DSDL_JOYSTICK=ON \
-    -DSDL_HAPTIC=ON \
-    -DSDL_POWER=ON \
-    -DSDL_THREADS=ON \
-    -DSDL_TIMERS=OFF \
-    -DSDL_FILE=OFF \
-    -DSDL_LOADSO=ON \
-    -DSDL_CPUINFO=OFF \
-    -DSDL_FILESYSTEM=OFF \
-    -DSDL_DLOPEN=ON \
-    -DSDL_SENSOR=ON \
-    -DVIDEO_OPENGL=ON \
-    -DVIDEO_OPENGLES=ON \
-    -DVIDEO_RPI=OFF \
-    -DVIDEO_WAYLAND=OFF \
-    -DVIDEO_X11=ON \
-    -DX11_SHARED=OFF \
-    -DVIDEO_X11_XCURSOR=OFF \
-    -DVIDEO_X11_XINERAMA=OFF \
-    -DVIDEO_X11_XINPUT=OFF \
-    -DVIDEO_X11_XRANDR=OFF \
-    -DVIDEO_X11_XSCRNSAVER=OFF \
-    -DVIDEO_X11_XSHAPE=OFF \
-    -DVIDEO_X11_XVM=OFF \
-    -DVIDEO_VULKAN=OFF \
-    -DVIDEO_VIVANTE=OFF \
-    -DVIDEO_COCOA=OFF \
-    -DVIDEO_METAL=OFF \
-    -DVIDEO_KMSDRM=OFF
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=/tool/SDL2/ubuntu-18.04_armv8_jetson_xavier \
+  -DCMAKE_SYSTEM_NAME=Linux \
+  -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+  -DCMAKE_C_COMPILER=/tool/llvm/clang/bin/clang \
+  -DCMAKE_C_COMPILER_TARGET=aarch64-linux-gnu \
+  -DCMAKE_CXX_COMPILER=/tool/llvm/clang/bin/clang++ \
+  -DCMAKE_CXX_COMPILER_TARGET=aarch64-linux-gnu \
+  -DCMAKE_FIND_ROOT_PATH=/tool/rootfs/ubuntu-18.04_armv8_jetson_xavier \
+  -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+  -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH \
+  -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH \
+  -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH \
+  -DCMAKE_SYSROOT=/tool/rootfs/ubuntu-18.04_armv8_jetson_xavier \
+  -DBUILD_SHARED_LIBS=OFF \
+  -DSDL_ATOMIC=OFF \
+  -DSDL_AUDIO=OFF \
+  -DSDL_VIDEO=ON \
+  -DSDL_RENDER=ON \
+  -DSDL_EVENTS=ON \
+  -DSDL_JOYSTICK=ON \
+  -DSDL_HAPTIC=ON \
+  -DSDL_POWER=ON \
+  -DSDL_THREADS=ON \
+  -DSDL_TIMERS=OFF \
+  -DSDL_FILE=OFF \
+  -DSDL_LOADSO=ON \
+  -DSDL_CPUINFO=OFF \
+  -DSDL_FILESYSTEM=OFF \
+  -DSDL_DLOPEN=ON \
+  -DSDL_SENSOR=ON \
+  -DVIDEO_OPENGL=ON \
+  -DVIDEO_OPENGLES=ON \
+  -DVIDEO_RPI=OFF \
+  -DVIDEO_WAYLAND=OFF \
+  -DVIDEO_X11=ON \
+  -DX11_SHARED=OFF \
+  -DVIDEO_X11_XCURSOR=OFF \
+  -DVIDEO_X11_XINERAMA=OFF \
+  -DVIDEO_X11_XINPUT=OFF \
+  -DVIDEO_X11_XRANDR=OFF \
+  -DVIDEO_X11_XSCRNSAVER=OFF \
+  -DVIDEO_X11_XSHAPE=OFF \
+  -DVIDEO_X11_XVM=OFF \
+  -DVIDEO_VULKAN=OFF \
+  -DVIDEO_VIVANTE=OFF \
+  -DVIDEO_COCOA=OFF \
+  -DVIDEO_METAL=OFF \
+  -DVIDEO_KMSDRM=OFF
 RUN cmake --build . -j$(nproc)
 RUN cmake --install .
 
