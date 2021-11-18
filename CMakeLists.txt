@@ -257,7 +257,7 @@ if (NOT "${BOOST_ROOT_DIR}" STREQUAL "")
 endif()
 
 if (USE_SDL2 AND (NOT "${SDL2_ROOT_DIR}" STREQUAL ""))
-  list(APPEND CMAKE_MODULE_PATH ${SDL2_ROOT_DIR}/cmake)
+  list(APPEND CMAKE_MODULE_PATH ${SDL2_ROOT_DIR}/lib/cmake)
   list(APPEND CMAKE_PREFIX_PATH ${SDL2_ROOT_DIR})
 endif()
 
@@ -711,8 +711,8 @@ elseif (TARGET_OS STREQUAL "linux")
         target_link_directories(momo PRIVATE ${_VC_PATH}/lib)
         target_link_libraries(momo
           PRIVATE
-            brcmGLESv2
-            brcmEGL
+            # brcmGLESv2
+            # brcmEGL
             bcm_host
             containers
             vcos

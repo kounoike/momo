@@ -31,6 +31,8 @@ elif [ -L $TARGET_DIR/usr/lib/gcc/aarch64-linux-gnu/8/libgcc_s.so ]; then
   else
     exit 1
   fi
+elif [ -e $TARGET_DIR/usr/lib/gcc/aarch64-linux-gnu/10/libgcc_s.so ]; then
+  :
 else
   exit 1
 fi
