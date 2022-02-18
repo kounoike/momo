@@ -15,10 +15,12 @@ set(USE_MMAL_ENCODER OFF CACHE BOOL "MMAL ハードウェアエンコーダを�
 set(USE_JETSON_ENCODER OFF CACHE BOOL "Jetson のハードウェアエンコーダを利用するかどうか")
 set(USE_H264 OFF CACHE BOOL "H264 を利用するかどうか")
 set(USE_SDL2 OFF CACHE BOOL "SDL2 による画面出力を利用するかどうか")
+set(USE_NDI OFF CACHE BOOL "NDI によるストリーム送信機能を利用するかどうか")
 set(USE_LINUX_PULSE_AUDIO OFF CACHE BOOL "Linux で ALSA の代わりに PulseAudio を利用するか")
 set(USE_SCREEN_CAPTURER OFF CACHE BOOL "スクリーンキャプチャラを利用するかどうか")
 set(BOOST_ROOT_DIR "" CACHE PATH "Boost のインストール先ディレクトリ\n空文字だった場合はデフォルト検索パスの Boost を利用する")
 set(SDL2_ROOT_DIR "" CACHE PATH "SDL2 のインストール先ディレクトリ\n空文字だった場合はデフォルト検索パスの SDL2 を利用する")
+set(NDI_ROOT_DIR "" CACHE PATH "NDI SDK のインストール先ディレクトリ")
 set(CLI11_ROOT_DIR "" CACHE PATH "CLI11 のインストール先ディレクトリ")
 set(NVCODEC_ROOT_DIR "" CACHE PATH "NVIDIA VIDEO CODEC SDK のインストール先ディレクトリ")
 set(WEBRTC_INCLUDE_DIR "" CACHE PATH "WebRTC のインクルードディレクトリ")
@@ -42,9 +44,11 @@ if(MOMO_PACKAGE_NAME STREQUAL "windows_x86_64")
   set(USE_NVCODEC_ENCODER ON)
   set(USE_H264 ON)
   set(USE_SDL2 ON)
+  set(USE_NDI ON)
   set(USE_SCREEN_CAPTURER ON)
   set(BOOST_ROOT_DIR ${_INSTALL_DIR}/boost)
   set(SDL2_ROOT_DIR ${_INSTALL_DIR}/SDL2)
+  set(NDI_ROOT_DIR "C:\\Program Files\\NDI\\NDI 5 SDK")
   set(CLI11_ROOT_DIR ${_INSTALL_DIR}/CLI11)
   set(WEBRTC_INCLUDE_DIR ${_INSTALL_DIR}/webrtc/include)
   set(WEBRTC_LIBRARY_DIR ${_INSTALL_DIR}/webrtc/lib)
@@ -219,11 +223,13 @@ elseif(MOMO_PACKAGE_NAME STREQUAL "ubuntu-20.04_x86_64")
   set(TARGET_ARCH "x86_64")
   set(USE_H264 ON)
   set(USE_SDL2 ON)
+  set(USE_NDI ON)
   set(USE_NVCODEC_ENCODER ON)
   set(USE_SCREEN_CAPTURER ON)
   set(BOOST_ROOT_DIR /root/boost)
   set(CLI11_ROOT_DIR /root/CLI11)
   set(SDL2_ROOT_DIR /root/SDL2)
+  set(NDI_ROOT_DIR /root/NDI)
   set(WEBRTC_INCLUDE_DIR /root/webrtc/include)
   set(WEBRTC_LIBRARY_DIR /root/webrtc/lib)
 
@@ -371,9 +377,32 @@ target_compile_definitions(momo
     USE_JETSON_ENCODER=$<BOOL:${USE_JETSON_ENCODER}>
     USE_H264=$<BOOL:${USE_H264}>
     USE_SDL2=$<BOOL:${USE_SDL2}>
+    USE_NDI=$<BOOL:${USE_NDI}>
     USE_LINUX_PULSE_AUDIO=$<BOOL:${USE_LINUX_PULSE_AUDIO}>
     USE_SCREEN_CAPTURER=$<BOOL:${USE_SCREEN_CAPTURER}>
 )
+
+if (USE_NDI)
+  target_sources(momo
+  PRIVATE
+    src/ndi_publisher/ndi_publisher.cpp
+  )
+  target_include_directories(momo
+    PRIVATE
+      "${NDI_ROOT_DIR}/include"
+  )
+  if (TARGET_OS STREQUAL "linux")
+    target_link_libraries(momo
+      PRIVATE
+        "${NDI_ROOT_DIR}/lib/x86_64-linux-gnu/libndi.so"
+    )
+  elseif(TARGET_OS STREQUAL "windows")
+    target_link_libraries(momo
+      PRIVATE
+        "${NDI_ROOT_DIR}/lib/x64/Processing.NDI.Lib.x64.lib"
+    )
+  endif ()
+endif ()
 
 if (USE_SDL2)
   target_sources(momo
@@ -384,7 +413,6 @@ if (USE_SDL2)
     PRIVATE
       _THREAD_SAFE
   )
-
 
   if ("${TARGET_OS}" STREQUAL "windows" OR "${TARGET_OS}" STREQUAL "macos")
     target_link_libraries(momo

@@ -85,6 +85,7 @@ if [ "$MOUNT_TYPE" = "mount" ]; then
     $DOCKER_PLATFORM \
     -it \
     --rm \
+    -v "${HOME}/dev/NDI/NDI SDK for Linux:/root/NDI" \
     -v "$WORK_DIR/..:/root/momo" \
     "$DOCKER_IMAGE" \
     /bin/bash -c "

@@ -33,6 +33,10 @@
 #include "sdl_renderer/sdl_renderer.h"
 #endif
 
+#if USE_NDI
+#include "ndi_publisher/ndi_publisher.h"
+#endif
+
 #include "ayame/ayame_client.h"
 #include "metrics/metrics_server.h"
 #include "p2p/p2p_server.h"
@@ -182,6 +186,13 @@ int main(int argc, char* argv[]) {
                                        args.fullscreen));
     rtc_manager->AddVideoReceiver(sdl_renderer.get());
   }
+#endif
+
+#if USE_NDI
+  std::unique_ptr<NDIPublisher> ndi_publisher = nullptr;
+  // TODO: add args
+  ndi_publisher.reset(new NDIPublisher());
+  rtc_manager->AddVideoReceiver(ndi_publisher.get());
 #endif
 
   {
