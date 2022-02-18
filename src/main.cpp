@@ -192,7 +192,7 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<NDIPublisher> ndi_publisher = nullptr;
   // TODO: add args
   ndi_publisher.reset(new NDIPublisher());
-  rtc_manager->AddVideoReceiver(ndi_publisher.get());
+  rtc_manager->AddVideoReceiver(ndi_publisher->GetVideoTrackReceiver());
 #endif
 
   {

@@ -7,21 +7,14 @@
 #include <third_party/libyuv/include/libyuv/convert_from.h>
 #include <third_party/libyuv/include/libyuv/video_common.h>
 
-NDIPublisher::NDIPublisher() {
-  //
-}
-
-NDIPublisher::~NDIPublisher() {
-  //
-}
-
-void NDIPublisher::AddTrack(webrtc::VideoTrackInterface* track) {
+void NDIPublisher::VideoReceiver::AddTrack(webrtc::VideoTrackInterface* track) {
   std::unique_ptr<Sink> sink(new Sink(track));
   webrtc::MutexLock lock(&sinks_lock_);
   sinks_.push_back(std::make_pair(track, std::move(sink)));
 }
 
-void NDIPublisher::RemoveTrack(webrtc::VideoTrackInterface* track) {
+void NDIPublisher::VideoReceiver::RemoveTrack(
+    webrtc::VideoTrackInterface* track) {
   webrtc::MutexLock lock(&sinks_lock_);
   sinks_.erase(
       std::remove_if(sinks_.begin(), sinks_.end(),
@@ -31,7 +24,8 @@ void NDIPublisher::RemoveTrack(webrtc::VideoTrackInterface* track) {
       sinks_.end());
 }
 
-NDIPublisher::Sink::Sink(webrtc::VideoTrackInterface* track) : track_(track) {
+NDIPublisher::VideoReceiver::Sink::Sink(webrtc::VideoTrackInterface* track)
+    : track_(track) {
   //
   NDIlib_send_create_t NDI_send_create_desc;
   NDI_send_create_desc.p_ndi_name = track->id().c_str();
@@ -41,12 +35,13 @@ NDIPublisher::Sink::Sink(webrtc::VideoTrackInterface* track) : track_(track) {
   track_->AddOrUpdateSink(this, rtc::VideoSinkWants());
 }
 
-NDIPublisher::Sink::~Sink() {
+NDIPublisher::VideoReceiver::Sink::~Sink() {
   NDIlib_send_destroy(pNDI_send_);
   track_->RemoveSink(this);
 }
 
-void NDIPublisher::Sink::OnFrame(const webrtc::VideoFrame& frame) {
+void NDIPublisher::VideoReceiver::Sink::OnFrame(
+    const webrtc::VideoFrame& frame) {
   //
   auto buffer_if = frame.video_frame_buffer()->ToI420();
   // RTC_LOG(LS_WARNING) << "OnFrame type: " << frame.video_frame_buffer()->type()
@@ -81,4 +76,54 @@ void NDIPublisher::Sink::OnFrame(const webrtc::VideoFrame& frame) {
   ndi_frame.p_data = &buffer[0];
   NDIlib_send_send_video_v2(pNDI_send_, &ndi_frame);
   // RTC_LOG(LS_WARNING) << "OnFrame done.";
+}
+
+void NDIPublisher::AudioReceiver::AddTrack(webrtc::AudioTrackInterface* track) {
+  std::unique_ptr<Sink> sink(new Sink(track));
+  webrtc::MutexLock lock(&sinks_lock_);
+  sinks_.push_back(std::make_pair(track, std::move(sink)));
+}
+
+void NDIPublisher::AudioReceiver::RemoveTrack(
+    webrtc::AudioTrackInterface* track) {
+  webrtc::MutexLock lock(&sinks_lock_);
+  sinks_.erase(
+      std::remove_if(sinks_.begin(), sinks_.end(),
+                     [track](const AudioTrackSinkVector::value_type& sink) {
+                       return sink.first == track;
+                     }),
+      sinks_.end());
+}
+
+NDIPublisher::AudioReceiver::Sink::Sink(webrtc::AudioTrackInterface* track)
+    : track_(track) {
+  //
+  NDIlib_send_create_t NDI_send_create_desc;
+  NDI_send_create_desc.p_ndi_name = track->id().c_str();
+  pNDI_send_ = NDIlib_send_create(&NDI_send_create_desc);
+  RTC_LOG(LS_WARNING) << "pNDI_send_ created for " << track->id() << " : "
+                      << (pNDI_send_ ? "NOT NULL" : "NULL");
+  track_->AddSink(this);
+}
+
+NDIPublisher::AudioReceiver::Sink::~Sink() {
+  NDIlib_send_destroy(pNDI_send_);
+  track_->RemoveSink(this);
+}
+
+// void NDIPublisher::AudioReceiver::Sink::OnData(
+//     const webrtc::AudioSinkInterface::Data& audio) {
+//   RTC_LOG(LS_WARNING) << "OnData called" << audio.;
+// }
+void NDIPublisher::AudioReceiver::Sink::OnData(
+    const void* audio_data,
+    int bits_per_sample,
+    int sample_rate,
+    size_t number_of_channels,
+    size_t number_of_frames,
+    absl::optional<int64_t> absolute_capture_timestamp_ms) {
+  RTC_LOG(LS_WARNING) << "bits_per_sample:" << bits_per_sample
+                      << " sample_rate:" << sample_rate
+                      << " number_of_channels:" << number_of_channels
+                      << " number_of_frames:" << number_of_frames;
 }
