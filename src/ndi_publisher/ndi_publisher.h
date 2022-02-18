@@ -37,9 +37,7 @@ class NDIPublisher : public StreamReceiver {
   void AddStream(webrtc::MediaStreamInterface* stream) override;
   void RemoveStream(webrtc::MediaStreamInterface* stream) override;
 
-  NDIlib_send_instance_t GetSendInstance(std::string stream_id) {
-    return ndi_sends_[stream_id];
-  }
+  NDIlib_send_instance_t GetSendInstance(webrtc::MediaStreamInterface* stream);
 
  protected:
   class VideoReceiver : public VideoTrackReceiver {

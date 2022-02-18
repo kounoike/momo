@@ -8,21 +8,33 @@
 #include <third_party/libyuv/include/libyuv/video_common.h>
 
 void NDIPublisher::AddStream(webrtc::MediaStreamInterface* stream) {
-  NDIlib_send_create_t NDI_send_create_desc;
-  NDI_send_create_desc.p_ndi_name = stream->id().c_str();
-  auto send = NDIlib_send_create(&NDI_send_create_desc);
-  ndi_sends_.insert(std::make_pair(stream->id(), send));
+  RTC_LOG(LS_WARNING) << "AddStream " << stream->id();
 }
 void NDIPublisher::RemoveStream(webrtc::MediaStreamInterface* stream) {
+  RTC_LOG(LS_WARNING) << "RemoveStream " << stream->id();
   auto send = ndi_sends_[stream->id()];
   ndi_sends_.erase(stream->id());
   NDIlib_send_destroy(send);
 }
 
+NDIlib_send_instance_t NDIPublisher::GetSendInstance(
+    webrtc::MediaStreamInterface* stream) {
+  auto it = ndi_sends_.find(stream->id());
+  if (it == ndi_sends_.end()) {
+    NDIlib_send_create_t NDI_send_create_desc;
+    NDI_send_create_desc.p_ndi_name = stream->id().c_str();
+    auto send = NDIlib_send_create(&NDI_send_create_desc);
+    ndi_sends_.insert(std::make_pair(stream->id(), send));
+  }
+  return ndi_sends_[stream->id()];
+}
+
 void NDIPublisher::VideoReceiver::AddTrack(
     webrtc::VideoTrackInterface* track,
     webrtc::MediaStreamInterface* stream) {
-  auto send = publisher_->GetSendInstance(stream->id());
+  RTC_LOG(LS_WARNING) << "AddTrack(video) " << stream->id() << " "
+                      << track->id();
+  auto send = publisher_->GetSendInstance(stream);
   std::unique_ptr<Sink> sink(new Sink(track, send));
   webrtc::MutexLock lock(&sinks_lock_);
   sinks_.push_back(std::make_pair(track, std::move(sink)));
@@ -30,6 +42,7 @@ void NDIPublisher::VideoReceiver::AddTrack(
 
 void NDIPublisher::VideoReceiver::RemoveTrack(
     webrtc::VideoTrackInterface* track) {
+  RTC_LOG(LS_WARNING) << "RemoveTrack(video) " << track->id();
   webrtc::MutexLock lock(&sinks_lock_);
   sinks_.erase(
       std::remove_if(sinks_.begin(), sinks_.end(),
@@ -53,7 +66,8 @@ NDIPublisher::VideoReceiver::Sink::~Sink() {
 void NDIPublisher::VideoReceiver::Sink::OnFrame(
     const webrtc::VideoFrame& frame) {
   //
-  auto buffer_if = frame.video_frame_buffer()->ToI420();
+  rtc::scoped_refptr<webrtc::I420BufferInterface> buffer_if =
+      frame.video_frame_buffer()->ToI420();
   // RTC_LOG(LS_WARNING) << "OnFrame type: " << frame.video_frame_buffer()->type()
   //                     << ": " << frame.width() << "x" << frame.height();
   // RTC_LOG(LS_WARNING) << "Original Buffer DataY: "
@@ -85,13 +99,16 @@ void NDIPublisher::VideoReceiver::Sink::OnFrame(
 
   ndi_frame.p_data = &buffer[0];
   NDIlib_send_send_video_v2(pNDI_send_, &ndi_frame);
-  // RTC_LOG(LS_WARNING) << "OnFrame done.";
+  // RTC_LOG(LS_WARNING) << "OnFrame done." << (pNDI_send_ ? "NOT NULL" : "NULL");
 }
 
 void NDIPublisher::AudioReceiver::AddTrack(
     webrtc::AudioTrackInterface* track,
     webrtc::MediaStreamInterface* stream) {
-  auto send = publisher_->GetSendInstance(stream->id());
+  RTC_LOG(LS_WARNING) << "AddTrack(audio) " << stream->id() << " "
+                      << track->id();
+  track->set_enabled(false);
+  auto send = publisher_->GetSendInstance(stream);
   std::unique_ptr<Sink> sink(new Sink(track, send));
   webrtc::MutexLock lock(&sinks_lock_);
   sinks_.push_back(std::make_pair(track, std::move(sink)));
@@ -99,6 +116,7 @@ void NDIPublisher::AudioReceiver::AddTrack(
 
 void NDIPublisher::AudioReceiver::RemoveTrack(
     webrtc::AudioTrackInterface* track) {
+  RTC_LOG(LS_WARNING) << "RemoveTrack(video) " << track->id();
   webrtc::MutexLock lock(&sinks_lock_);
   sinks_.erase(
       std::remove_if(sinks_.begin(), sinks_.end(),
@@ -130,19 +148,19 @@ void NDIPublisher::AudioReceiver::Sink::OnData(
     size_t number_of_channels,
     size_t number_of_frames,
     absl::optional<int64_t> absolute_capture_timestamp_ms) {
-  RTC_LOG(LS_WARNING) << "bits_per_sample:" << bits_per_sample
-                      << " sample_rate:" << sample_rate
-                      << " number_of_channels:" << number_of_channels
-                      << " number_of_frames:" << number_of_frames;
-  NDIlib_audio_frame_v2_t ndi_audio_frame;
+  // RTC_LOG(LS_WARNING) << "bits_per_sample:" << bits_per_sample
+  //                     << " sample_rate:" << sample_rate
+  //                     << " number_of_channels:" << number_of_channels
+  //                     << " number_of_frames:" << number_of_frames;
+  NDIlib_audio_frame_interleaved_16s_t ndi_audio_frame;
   ndi_audio_frame.no_channels = number_of_channels;
   ndi_audio_frame.no_samples = number_of_frames;
   ndi_audio_frame.sample_rate = sample_rate;
-  if (absolute_capture_timestamp_ms.has_value()) {
-    ndi_audio_frame.timestamp = absolute_capture_timestamp_ms.value();
-  }
+  // if (absolute_capture_timestamp_ms.has_value()) {
+  //   ndi_audio_frame.timestamp = absolute_capture_timestamp_ms.value();
+  // }
   ndi_audio_frame.p_data =
-      const_cast<float*>(reinterpret_cast<const float*>(audio_data));
-  NDIlib_send_send_audio_v2(pNDI_send_, &ndi_audio_frame);
-  RTC_LOG(LS_WARNING) << "Audio send done.";
+      const_cast<int16_t*>(reinterpret_cast<const int16_t*>(audio_data));
+  NDIlib_util_send_send_audio_interleaved_16s(pNDI_send_, &ndi_audio_frame);
+  // RTC_LOG(LS_WARNING) << "Audio send done.";
 }
