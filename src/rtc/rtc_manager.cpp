@@ -28,9 +28,8 @@
 
 RTCManager::RTCManager(
     RTCManagerConfig config,
-    rtc::scoped_refptr<ScalableVideoTrackSource> video_track_source,
-    VideoTrackReceiver* receiver)
-    : config_(std::move(config)), receiver_(receiver) {
+    rtc::scoped_refptr<ScalableVideoTrackSource> video_track_source)
+    : config_(std::move(config)) {
   rtc::InitializeSSL();
 
   network_thread_ = rtc::Thread::CreateWithSocketServer();
@@ -167,8 +166,10 @@ RTCManager::RTCManager(
         video_track_->set_content_hint(
             webrtc::VideoTrackInterface::ContentHint::kText);
       }
-      if (receiver_ != nullptr && config_.show_me) {
-        receiver_->AddTrack(video_track_);
+      if (!video_receivers_.empty() && config_.show_me) {
+        for (auto& receiver : video_receivers_) {
+          receiver->AddTrack(video_track_);
+        }
       }
     } else {
       RTC_LOG(LS_WARNING) << __FUNCTION__ << ": Cannot create video_track";
@@ -187,6 +188,14 @@ RTCManager::~RTCManager() {
   rtc::CleanupSSL();
 }
 
+void RTCManager::AddVideoReceiver(VideoTrackReceiver* video_receiver) {
+  video_receivers_.push_back(video_receiver);
+}
+
+void RTCManager::AddAudioReceiver(AudioTrackReceiver* audio_receiver) {
+  audio_receivers_.push_back(audio_receiver);
+}
+
 void RTCManager::AddDataManager(std::shared_ptr<RTCDataManager> data_manager) {
   data_manager_dispatcher_.Add(data_manager);
 }
@@ -195,8 +204,8 @@ std::shared_ptr<RTCConnection> RTCManager::CreateConnection(
     webrtc::PeerConnectionInterface::RTCConfiguration rtc_config,
     RTCMessageSender* sender) {
   rtc_config.sdp_semantics = webrtc::SdpSemantics::kUnifiedPlan;
-  std::unique_ptr<PeerConnectionObserver> observer(
-      new PeerConnectionObserver(sender, receiver_, &data_manager_dispatcher_));
+  std::unique_ptr<PeerConnectionObserver> observer(new PeerConnectionObserver(
+      sender, video_receivers_, audio_receivers_, &data_manager_dispatcher_));
   webrtc::PeerConnectionDependencies dependencies(observer.get());
 
   // WebRTC の SSL 接続の検証は自前のルート証明書(rtc_base/ssl_roots.h)でやっていて、

@@ -5,6 +5,7 @@
 #include <api/peer_connection_interface.h>
 #include <pc/video_track_source.h>
 
+#include "audio_track_receiver.h"
 #include "rtc_connection.h"
 #include "rtc_data_manager_dispatcher.h"
 #include "rtc_message_sender.h"
@@ -54,9 +55,10 @@ struct RTCManagerConfig {
 class RTCManager {
  public:
   RTCManager(RTCManagerConfig config,
-             rtc::scoped_refptr<ScalableVideoTrackSource> video_track_source,
-             VideoTrackReceiver* receiver);
+             rtc::scoped_refptr<ScalableVideoTrackSource> video_track_source);
   ~RTCManager();
+  void AddVideoReceiver(VideoTrackReceiver* video_receiver);
+  void AddAudioReceiver(AudioTrackReceiver* audio_receiver);
   void AddDataManager(std::shared_ptr<RTCDataManager> data_manager);
   std::shared_ptr<RTCConnection> CreateConnection(
       webrtc::PeerConnectionInterface::RTCConfiguration rtc_config,
@@ -73,7 +75,8 @@ class RTCManager {
   std::unique_ptr<rtc::Thread> worker_thread_;
   std::unique_ptr<rtc::Thread> signaling_thread_;
   RTCManagerConfig config_;
-  VideoTrackReceiver* receiver_;
+  std::vector<VideoTrackReceiver*> video_receivers_;
+  std::vector<AudioTrackReceiver*> audio_receivers_;
   RTCDataManagerDispatcher data_manager_dispatcher_;
 };
 

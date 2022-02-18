@@ -44,7 +44,7 @@ void PeerConnectionObserver::OnIceCandidate(
 
 void PeerConnectionObserver::OnTrack(
     rtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver) {
-  if (receiver_ == nullptr)
+  if (video_receivers_.empty() && audio_receivers_.empty())
     return;
   rtc::scoped_refptr<webrtc::MediaStreamTrackInterface> track =
       transceiver->receiver()->track();
@@ -52,13 +52,23 @@ void PeerConnectionObserver::OnTrack(
     webrtc::VideoTrackInterface* video_track =
         static_cast<webrtc::VideoTrackInterface*>(track.get());
     video_tracks_.push_back(video_track);
-    receiver_->AddTrack(video_track);
+    for (auto&& receiver : video_receivers_) {
+      receiver->AddTrack(video_track);
+    }
+  }
+  if (track->kind() == webrtc::MediaStreamTrackInterface::kAudioKind) {
+    webrtc::AudioTrackInterface* audio_track =
+        static_cast<webrtc::AudioTrackInterface*>(track.get());
+    audio_tracks_.push_back(audio_track);
+    for (auto& receiver : audio_receivers_) {
+      receiver->AddTrack(audio_track);
+    }
   }
 }
 
 void PeerConnectionObserver::OnRemoveTrack(
     rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) {
-  if (receiver_ == nullptr)
+  if (video_receivers_.empty() && audio_receivers_.empty())
     return;
   rtc::scoped_refptr<webrtc::MediaStreamTrackInterface> track =
       receiver->track();
@@ -71,15 +81,36 @@ void PeerConnectionObserver::OnRemoveTrack(
                          return track == video_track;
                        }),
         video_tracks_.end());
-    receiver_->RemoveTrack(video_track);
+    for (auto& receiver : video_receivers_) {
+      receiver->RemoveTrack(video_track);
+    }
+  }
+  if (track->kind() == webrtc::MediaStreamTrackInterface::kAudioKind) {
+    webrtc::AudioTrackInterface* audio_track =
+        static_cast<webrtc::AudioTrackInterface*>(track.get());
+    audio_tracks_.erase(
+        std::remove_if(audio_tracks_.begin(), audio_tracks_.end(),
+                       [audio_track](const webrtc::AudioTrackInterface* track) {
+                         return track == audio_track;
+                       }),
+        audio_tracks_.end());
+    for (auto& receiver : audio_receivers_) {
+      receiver->RemoveTrack(audio_track);
+    }
   }
 }
 
 void PeerConnectionObserver::ClearAllRegisteredTracks() {
-  if (receiver_ != nullptr) {
+  for (auto& receiver : video_receivers_) {
     for (webrtc::VideoTrackInterface* video_track : video_tracks_) {
-      receiver_->RemoveTrack(video_track);
+      receiver->RemoveTrack(video_track);
     }
   }
   video_tracks_.clear();
+  for (auto& receiver : audio_receivers_) {
+    for (webrtc::AudioTrackInterface* audio_track : audio_tracks_) {
+      receiver->RemoveTrack(audio_track);
+    }
+  }
+  audio_tracks_.clear();
 }

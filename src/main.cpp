@@ -171,6 +171,10 @@ int main(int argc, char* argv[]) {
   rtcm_config.h264_decoder = args.h264_decoder;
 
   rtcm_config.priority = args.priority;
+
+  std::unique_ptr<RTCManager> rtc_manager(
+      new RTCManager(std::move(rtcm_config), std::move(capturer)));
+
 #if USE_SDL2
   std::unique_ptr<SDLRenderer> sdl_renderer = nullptr;
   if (args.use_sdl) {
@@ -178,11 +182,9 @@ int main(int argc, char* argv[]) {
                                        args.fullscreen));
   }
 
-  std::unique_ptr<RTCManager> rtc_manager(new RTCManager(
-      std::move(rtcm_config), std::move(capturer), sdl_renderer.get()));
-#else
-  std::unique_ptr<RTCManager> rtc_manager(
-      new RTCManager(std::move(rtcm_config), std::move(capturer), nullptr));
+  if (sdl_renderer) {
+    rtc_manager->AddVideoReceiver(sdl_renderer.get());
+  }
 #endif
 
   {

@@ -1,9 +1,12 @@
 #ifndef PEER_CONNECTION_OBSERVER_H_
 #define PEER_CONNECTION_OBSERVER_H_
 
+#include <vector>
+
 // WebRTC
 #include <api/peer_connection_interface.h>
 
+#include "audio_track_receiver.h"
 #include "rtc_data_manager.h"
 #include "rtc_message_sender.h"
 #include "video_track_receiver.h"
@@ -11,9 +14,15 @@
 class PeerConnectionObserver : public webrtc::PeerConnectionObserver {
  public:
   PeerConnectionObserver(RTCMessageSender* sender,
-                         VideoTrackReceiver* receiver,
+                         std::vector<VideoTrackReceiver*>& video_receivers,
+                         std::vector<AudioTrackReceiver*>& audio_receivers,
                          RTCDataManager* data_manager)
-      : sender_(sender), receiver_(receiver), data_manager_(data_manager) {}
+      : sender_(sender), data_manager_(data_manager) {
+    std::copy(video_receivers.begin(), video_receivers.end(),
+              video_receivers_.end());
+    std::copy(audio_receivers.begin(), audio_receivers.end(),
+              audio_receivers_.end());
+  }
   ~PeerConnectionObserver();
 
  private:
@@ -36,9 +45,11 @@ class PeerConnectionObserver : public webrtc::PeerConnectionObserver {
   void ClearAllRegisteredTracks();
 
   RTCMessageSender* sender_;
-  VideoTrackReceiver* receiver_;
+  std::vector<VideoTrackReceiver*> video_receivers_;
+  std::vector<AudioTrackReceiver*> audio_receivers_;
   RTCDataManager* data_manager_;
   std::vector<webrtc::VideoTrackInterface*> video_tracks_;
+  std::vector<webrtc::AudioTrackInterface*> audio_tracks_;
 };
 
 #endif
