@@ -188,6 +188,10 @@ RTCManager::~RTCManager() {
   rtc::CleanupSSL();
 }
 
+void RTCManager::AddStreamReceiver(StreamReceiver* stream_receiver) {
+  stream_receivers_.push_back(stream_receiver);
+}
+
 void RTCManager::AddVideoReceiver(VideoTrackReceiver* video_receiver) {
   video_receivers_.push_back(video_receiver);
 }
@@ -204,21 +208,26 @@ std::shared_ptr<RTCConnection> RTCManager::CreateConnection(
     webrtc::PeerConnectionInterface::RTCConfiguration rtc_config,
     RTCMessageSender* sender) {
   rtc_config.sdp_semantics = webrtc::SdpSemantics::kUnifiedPlan;
+  printf("test1\n");
   std::unique_ptr<PeerConnectionObserver> observer(
       new PeerConnectionObserver(sender, stream_receivers_, video_receivers_,
                                  audio_receivers_, &data_manager_dispatcher_));
+  printf("test2\n");
   webrtc::PeerConnectionDependencies dependencies(observer.get());
 
   // WebRTC の SSL 接続の検証は自前のルート証明書(rtc_base/ssl_roots.h)でやっていて、
   // その中に Let's Encrypt の証明書が無いため、接続先によっては接続できないことがある。
   //
   // それを解消するために tls_cert_verifier を設定して自前で検証を行う。
+  printf("test3\n");
   dependencies.tls_cert_verifier = std::unique_ptr<rtc::SSLCertificateVerifier>(
       new RTCSSLVerifier(config_.insecure));
 
+  printf("test4\n");
   webrtc::RTCErrorOr<rtc::scoped_refptr<webrtc::PeerConnectionInterface>>
       connection = factory_->CreatePeerConnectionOrError(
           rtc_config, std::move(dependencies));
+  printf("test5\n");
   if (!connection.ok()) {
     RTC_LOG(LS_ERROR) << __FUNCTION__ << ": CreatePeerConnection failed";
     return nullptr;

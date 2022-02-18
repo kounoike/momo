@@ -189,10 +189,13 @@ int main(int argc, char* argv[]) {
 #endif
 
 #if USE_NDI
+  NDIlib_initialize();
   std::unique_ptr<NDIPublisher> ndi_publisher = nullptr;
   // TODO: add args
   ndi_publisher.reset(new NDIPublisher());
+  rtc_manager->AddStreamReceiver(ndi_publisher.get());
   rtc_manager->AddVideoReceiver(ndi_publisher->GetVideoTrackReceiver());
+  rtc_manager->AddAudioReceiver(ndi_publisher->GetAudioTrackReceiver());
 #endif
 
   {
@@ -334,6 +337,10 @@ int main(int argc, char* argv[]) {
   sdl_renderer = nullptr;
 #endif
   rtc_manager = nullptr;
+
+#if USE_NDI
+  NDIlib_destroy();
+#endif
 
   return 0;
 }

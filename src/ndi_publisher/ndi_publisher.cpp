@@ -7,8 +7,23 @@
 #include <third_party/libyuv/include/libyuv/convert_from.h>
 #include <third_party/libyuv/include/libyuv/video_common.h>
 
-void NDIPublisher::VideoReceiver::AddTrack(webrtc::VideoTrackInterface* track) {
-  std::unique_ptr<Sink> sink(new Sink(track));
+void NDIPublisher::AddStream(webrtc::MediaStreamInterface* stream) {
+  NDIlib_send_create_t NDI_send_create_desc;
+  NDI_send_create_desc.p_ndi_name = stream->id().c_str();
+  auto send = NDIlib_send_create(&NDI_send_create_desc);
+  ndi_sends_.insert(std::make_pair(stream->id(), send));
+}
+void NDIPublisher::RemoveStream(webrtc::MediaStreamInterface* stream) {
+  auto send = ndi_sends_[stream->id()];
+  ndi_sends_.erase(stream->id());
+  NDIlib_send_destroy(send);
+}
+
+void NDIPublisher::VideoReceiver::AddTrack(
+    webrtc::VideoTrackInterface* track,
+    webrtc::MediaStreamInterface* stream) {
+  auto send = publisher_->GetSendInstance(stream->id());
+  std::unique_ptr<Sink> sink(new Sink(track, send));
   webrtc::MutexLock lock(&sinks_lock_);
   sinks_.push_back(std::make_pair(track, std::move(sink)));
 }
@@ -24,19 +39,14 @@ void NDIPublisher::VideoReceiver::RemoveTrack(
       sinks_.end());
 }
 
-NDIPublisher::VideoReceiver::Sink::Sink(webrtc::VideoTrackInterface* track)
-    : track_(track) {
+NDIPublisher::VideoReceiver::Sink::Sink(webrtc::VideoTrackInterface* track,
+                                        NDIlib_send_instance_t send)
+    : track_(track), pNDI_send_(send) {
   //
-  NDIlib_send_create_t NDI_send_create_desc;
-  NDI_send_create_desc.p_ndi_name = track->id().c_str();
-  pNDI_send_ = NDIlib_send_create(&NDI_send_create_desc);
-  RTC_LOG(LS_WARNING) << "pNDI_send_ created for " << track->id() << " : "
-                      << (pNDI_send_ ? "NOT NULL" : "NULL");
   track_->AddOrUpdateSink(this, rtc::VideoSinkWants());
 }
 
 NDIPublisher::VideoReceiver::Sink::~Sink() {
-  NDIlib_send_destroy(pNDI_send_);
   track_->RemoveSink(this);
 }
 
@@ -78,8 +88,11 @@ void NDIPublisher::VideoReceiver::Sink::OnFrame(
   // RTC_LOG(LS_WARNING) << "OnFrame done.";
 }
 
-void NDIPublisher::AudioReceiver::AddTrack(webrtc::AudioTrackInterface* track) {
-  std::unique_ptr<Sink> sink(new Sink(track));
+void NDIPublisher::AudioReceiver::AddTrack(
+    webrtc::AudioTrackInterface* track,
+    webrtc::MediaStreamInterface* stream) {
+  auto send = publisher_->GetSendInstance(stream->id());
+  std::unique_ptr<Sink> sink(new Sink(track, send));
   webrtc::MutexLock lock(&sinks_lock_);
   sinks_.push_back(std::make_pair(track, std::move(sink)));
 }
@@ -95,19 +108,14 @@ void NDIPublisher::AudioReceiver::RemoveTrack(
       sinks_.end());
 }
 
-NDIPublisher::AudioReceiver::Sink::Sink(webrtc::AudioTrackInterface* track)
-    : track_(track) {
+NDIPublisher::AudioReceiver::Sink::Sink(webrtc::AudioTrackInterface* track,
+                                        NDIlib_send_instance_t send)
+    : track_(track), pNDI_send_(send) {
   //
-  NDIlib_send_create_t NDI_send_create_desc;
-  NDI_send_create_desc.p_ndi_name = track->id().c_str();
-  pNDI_send_ = NDIlib_send_create(&NDI_send_create_desc);
-  RTC_LOG(LS_WARNING) << "pNDI_send_ created for " << track->id() << " : "
-                      << (pNDI_send_ ? "NOT NULL" : "NULL");
   track_->AddSink(this);
 }
 
 NDIPublisher::AudioReceiver::Sink::~Sink() {
-  NDIlib_send_destroy(pNDI_send_);
   track_->RemoveSink(this);
 }
 
@@ -126,4 +134,15 @@ void NDIPublisher::AudioReceiver::Sink::OnData(
                       << " sample_rate:" << sample_rate
                       << " number_of_channels:" << number_of_channels
                       << " number_of_frames:" << number_of_frames;
+  NDIlib_audio_frame_v2_t ndi_audio_frame;
+  ndi_audio_frame.no_channels = number_of_channels;
+  ndi_audio_frame.no_samples = number_of_frames;
+  ndi_audio_frame.sample_rate = sample_rate;
+  if (absolute_capture_timestamp_ms.has_value()) {
+    ndi_audio_frame.timestamp = absolute_capture_timestamp_ms.value();
+  }
+  ndi_audio_frame.p_data =
+      const_cast<float*>(reinterpret_cast<const float*>(audio_data));
+  NDIlib_send_send_audio_v2(pNDI_send_, &ndi_audio_frame);
+  RTC_LOG(LS_WARNING) << "Audio send done.";
 }

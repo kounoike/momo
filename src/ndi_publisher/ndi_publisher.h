@@ -1,6 +1,7 @@
 #ifndef NDI_PUBLISHER_H_
 #define NDI_PUBLISHER_H_
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -14,34 +15,47 @@
 #include <api/video/video_frame.h>
 #include <api/video/video_sink_interface.h>
 #include <rtc/audio_track_receiver.h>
+#include <rtc/stream_receiver.h>
 #include <rtc/video_track_receiver.h>
 #include <rtc_base/synchronization/mutex.h>
 
 // NDI
 #include <Processing.NDI.Lib.h>
 
-class NDIPublisher {
+class NDIPublisher : public StreamReceiver {
  public:
-  NDIPublisher(){};
+  NDIPublisher() : video_receiver_(this), audio_receiver_(this){};
   ~NDIPublisher(){};
+
   VideoTrackReceiver* GetVideoTrackReceiver() {
     return static_cast<VideoTrackReceiver*>(&video_receiver_);
   };
-  AudioTrackReceiver* GetAudioTrackReceiver();
+  AudioTrackReceiver* GetAudioTrackReceiver() {
+    return static_cast<AudioTrackReceiver*>(&audio_receiver_);
+  };
+
+  void AddStream(webrtc::MediaStreamInterface* stream) override;
+  void RemoveStream(webrtc::MediaStreamInterface* stream) override;
+
+  NDIlib_send_instance_t GetSendInstance(std::string stream_id) {
+    return ndi_sends_[stream_id];
+  }
 
  protected:
   class VideoReceiver : public VideoTrackReceiver {
    public:
-    VideoReceiver(){};
+    VideoReceiver(NDIPublisher* p) : publisher_(p){};
     ~VideoReceiver(){};
 
-    void AddTrack(webrtc::VideoTrackInterface* track) override;
+    void AddTrack(webrtc::VideoTrackInterface* track) override{};
+    void AddTrack(webrtc::VideoTrackInterface* track,
+                  webrtc::MediaStreamInterface* stream) override;
     void RemoveTrack(webrtc::VideoTrackInterface* track) override;
 
    protected:
     class Sink : public rtc::VideoSinkInterface<webrtc::VideoFrame> {
      public:
-      Sink(webrtc::VideoTrackInterface* track);
+      Sink(webrtc::VideoTrackInterface* track, NDIlib_send_instance_t send);
       ~Sink();
 
       void OnFrame(const webrtc::VideoFrame& frame) override;
@@ -52,6 +66,7 @@ class NDIPublisher {
     };
 
    private:
+    NDIPublisher* publisher_;
     webrtc::Mutex sinks_lock_;
     typedef std::vector<
         std::pair<webrtc::VideoTrackInterface*, std::unique_ptr<Sink> > >
@@ -63,16 +78,18 @@ class NDIPublisher {
 
   class AudioReceiver : public AudioTrackReceiver {
    public:
-    AudioReceiver(){};
+    AudioReceiver(NDIPublisher* p) : publisher_(p){};
     ~AudioReceiver(){};
 
-    void AddTrack(webrtc::AudioTrackInterface* track) override;
+    void AddTrack(webrtc::AudioTrackInterface* track) override{};
+    void AddTrack(webrtc::AudioTrackInterface* track,
+                  webrtc::MediaStreamInterface* stream) override;
     void RemoveTrack(webrtc::AudioTrackInterface* track) override;
 
    protected:
     class Sink : public webrtc::AudioTrackSinkInterface {
      public:
-      Sink(webrtc::AudioTrackInterface* track);
+      Sink(webrtc::AudioTrackInterface* track, NDIlib_send_instance_t send);
       ~Sink();
 
       void OnData(const void* audio_data,
@@ -88,6 +105,7 @@ class NDIPublisher {
     };
 
    private:
+    NDIPublisher* publisher_;
     webrtc::Mutex sinks_lock_;
     typedef std::vector<
         std::pair<webrtc::AudioTrackInterface*, std::unique_ptr<Sink> > >
@@ -100,6 +118,7 @@ class NDIPublisher {
  private:
   VideoReceiver video_receiver_;
   AudioReceiver audio_receiver_;
+  std::map<std::string, NDIlib_send_instance_t> ndi_sends_;
 };
 
 #endif
