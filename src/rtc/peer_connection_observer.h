@@ -9,15 +9,19 @@
 #include "audio_track_receiver.h"
 #include "rtc_data_manager.h"
 #include "rtc_message_sender.h"
+#include "stream_receiver.h"
 #include "video_track_receiver.h"
 
 class PeerConnectionObserver : public webrtc::PeerConnectionObserver {
  public:
   PeerConnectionObserver(RTCMessageSender* sender,
+                         std::vector<StreamReceiver*>& stream_receivers,
                          std::vector<VideoTrackReceiver*>& video_receivers,
                          std::vector<AudioTrackReceiver*>& audio_receivers,
                          RTCDataManager* data_manager)
       : sender_(sender), data_manager_(data_manager) {
+    std::copy(stream_receivers.begin(), stream_receivers.end(),
+              stream_receivers_.end());
     std::copy(video_receivers.begin(), video_receivers.end(),
               video_receivers_.end());
     std::copy(audio_receivers.begin(), audio_receivers.end(),
@@ -36,6 +40,10 @@ class PeerConnectionObserver : public webrtc::PeerConnectionObserver {
   void OnIceGatheringChange(
       webrtc::PeerConnectionInterface::IceGatheringState new_state) override{};
   void OnIceCandidate(const webrtc::IceCandidateInterface* candidate) override;
+  void OnAddStream(
+      rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) override;
+  void OnRemoveStream(
+      rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) override;
   void OnTrack(
       rtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver) override;
   void OnRemoveTrack(
@@ -45,6 +53,7 @@ class PeerConnectionObserver : public webrtc::PeerConnectionObserver {
   void ClearAllRegisteredTracks();
 
   RTCMessageSender* sender_;
+  std::vector<StreamReceiver*> stream_receivers_;
   std::vector<VideoTrackReceiver*> video_receivers_;
   std::vector<AudioTrackReceiver*> audio_receivers_;
   RTCDataManager* data_manager_;

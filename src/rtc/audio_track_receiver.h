@@ -9,6 +9,10 @@
 class AudioTrackReceiver {
  public:
   virtual void AddTrack(webrtc::AudioTrackInterface* track) = 0;
+  virtual void AddTrack(webrtc::AudioTrackInterface* track,
+                        webrtc::MediaStreamInterface* stream) {
+    AddTrack(track);
+  }
   virtual void RemoveTrack(webrtc::AudioTrackInterface* track) = 0;
 };
 

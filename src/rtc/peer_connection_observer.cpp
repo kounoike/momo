@@ -42,26 +42,57 @@ void PeerConnectionObserver::OnIceCandidate(
   }
 }
 
+void PeerConnectionObserver::OnAddStream(
+    rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) {
+  for (auto& receiver : stream_receivers_) {
+    receiver->AddStream(stream.get());
+  }
+}
+
+void PeerConnectionObserver::OnRemoveStream(
+    rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) {
+  for (auto& receiver : stream_receivers_) {
+    receiver->RemoveStream(stream.get());
+  }
+}
+
 void PeerConnectionObserver::OnTrack(
     rtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver) {
   if (video_receivers_.empty() && audio_receivers_.empty())
     return;
   rtc::scoped_refptr<webrtc::MediaStreamTrackInterface> track =
       transceiver->receiver()->track();
+  auto streams = transceiver->receiver()->streams();
   if (track->kind() == webrtc::MediaStreamTrackInterface::kVideoKind) {
+    auto it = std::find_if(
+        streams.begin(), streams.end(),
+        [track](rtc::scoped_refptr<webrtc::MediaStreamInterface> p) {
+          auto t = p->FindVideoTrack(track->id());
+          return (bool)t;
+        });
+    auto stream = it->get();
+
     webrtc::VideoTrackInterface* video_track =
         static_cast<webrtc::VideoTrackInterface*>(track.get());
     video_tracks_.push_back(video_track);
     for (auto&& receiver : video_receivers_) {
-      receiver->AddTrack(video_track);
+      receiver->AddTrack(video_track, stream);
     }
   }
   if (track->kind() == webrtc::MediaStreamTrackInterface::kAudioKind) {
+    auto it = std::find_if(
+        streams.begin(), streams.end(),
+        [track](rtc::scoped_refptr<webrtc::MediaStreamInterface> p) {
+          auto t = p->FindAudioTrack(track->id());
+          return (bool)t;
+        });
+    auto stream = it->get();
+
     webrtc::AudioTrackInterface* audio_track =
         static_cast<webrtc::AudioTrackInterface*>(track.get());
     audio_tracks_.push_back(audio_track);
     for (auto& receiver : audio_receivers_) {
-      receiver->AddTrack(audio_track);
+      receiver->AddTrack(audio_track, stream);
     }
   }
 }

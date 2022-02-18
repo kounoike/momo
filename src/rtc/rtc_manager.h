@@ -10,6 +10,7 @@
 #include "rtc_data_manager_dispatcher.h"
 #include "rtc_message_sender.h"
 #include "scalable_track_source.h"
+#include "stream_receiver.h"
 #include "video_codec_info.h"
 #include "video_track_receiver.h"
 
@@ -57,6 +58,7 @@ class RTCManager {
   RTCManager(RTCManagerConfig config,
              rtc::scoped_refptr<ScalableVideoTrackSource> video_track_source);
   ~RTCManager();
+  void AddStreamReceiver(StreamReceiver* stream_receiver);
   void AddVideoReceiver(VideoTrackReceiver* video_receiver);
   void AddAudioReceiver(AudioTrackReceiver* audio_receiver);
   void AddDataManager(std::shared_ptr<RTCDataManager> data_manager);
@@ -75,6 +77,8 @@ class RTCManager {
   std::unique_ptr<rtc::Thread> worker_thread_;
   std::unique_ptr<rtc::Thread> signaling_thread_;
   RTCManagerConfig config_;
+
+  std::vector<StreamReceiver*> stream_receivers_;
   std::vector<VideoTrackReceiver*> video_receivers_;
   std::vector<AudioTrackReceiver*> audio_receivers_;
   RTCDataManagerDispatcher data_manager_dispatcher_;
