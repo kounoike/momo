@@ -89,6 +89,7 @@ if [ "$MOUNT_TYPE" = "mount" ]; then
     "$DOCKER_IMAGE" \
     /bin/bash -c "
       set -ex
+      export PATH=/root/llvm/clang/bin:\$PATH
       source /root/webrtc/VERSIONS
       mkdir -p /root/momo/_build/$PACKAGE_NAME
       pushd /root/momo/_build/$PACKAGE_NAME

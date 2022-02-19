@@ -311,7 +311,23 @@ if (USE_SDL2)
   find_package(SDL2 REQUIRED)
 endif()
 
+include(ExternalProject)
+ExternalProject_Add(
+  hisui
+  GIT_REPOSITORY https://github.com/kounoike/hisui.git
+  GIT_TAG cmake-only
+  GIT_SUBMODULES_RECURSE TRUE
+  CONFIGURE_COMMAND cmake -E env cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/root/llvm/clang/bin/clang -DCMAKE_CXX_COMPILER=/root/llvm/clang/bin/clang++ ../hisui
+  BUILD_COMMAND cmake -E env cmake --build . -j $(nproc)
+  # INSTALL_COMMAND cmake -E env cmake --install . --prefix ${CMAKE_CURRENT_BINARY_DIR}/install
+  INSTALL_COMMAND ""
+  EXCLUDE_FROM_ALL TRUE
+)
+ExternalProject_Get_Property(hisui BINARY_DIR)
+set(hisui_BINARYE_DIR "${BINARY_DIR}")
+
 add_executable(momo)
+add_dependencies(momo hisui)
 
 string(SUBSTRING "${MOMO_COMMIT}" 0 8 MOMO_COMMIT_SHORT)
 string(SUBSTRING "${WEBRTC_COMMIT}" 0 8 WEBRTC_COMMIT_SHORT)
@@ -358,6 +374,7 @@ target_link_libraries(momo
     Boost::filesystem
     Boost::json
     CLI11::CLI11
+    ${hisui_BINARYE_DIR}/libhisui.a
 )
 
 target_compile_definitions(momo

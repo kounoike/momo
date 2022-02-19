@@ -135,3 +135,6 @@ RUN set -ex \
   && add-apt-repository "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /" \
   && apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get -y install cuda=$CUDA_VERSION clang-10
+
+RUN apt-get install -y g++-10
+RUN apt-get install yasm
