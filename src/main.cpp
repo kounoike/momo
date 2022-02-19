@@ -53,7 +53,6 @@
 const size_t kDefaultMaxLogFileSize = 10 * 1024 * 1024;
 
 int main(int argc, char* argv[]) {
-  printf("main start...");
   try {
 #ifdef _WIN32
     webrtc::ScopedCOMInitializer com_initializer(
@@ -193,7 +192,7 @@ int main(int argc, char* argv[]) {
 
 #if USE_NDI
     RTC_LOG(LS_WARNING) << "NDIlib_initialize start...";
-    NDIlib_initialize();
+    // NDIlib_initialize();
     RTC_LOG(LS_WARNING) << "NDIlib_initialize done.";
     std::unique_ptr<NDIPublisher> ndi_publisher = nullptr;
     // TODO: add args
@@ -345,7 +344,7 @@ int main(int argc, char* argv[]) {
     rtc_manager = nullptr;
 
 #if USE_NDI
-    NDIlib_destroy();
+    // NDIlib_destroy();
 #endif
 
     return 0;

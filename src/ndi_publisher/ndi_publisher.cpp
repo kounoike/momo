@@ -1,5 +1,6 @@
 #include "ndi_publisher.h"
 
+#include <chrono>
 #include <vector>
 
 #include <api/video/i420_buffer.h>
@@ -23,6 +24,8 @@ NDIlib_send_instance_t NDIPublisher::GetSendInstance(
   if (it == ndi_sends_.end()) {
     NDIlib_send_create_t NDI_send_create_desc;
     NDI_send_create_desc.p_ndi_name = stream->id().c_str();
+    NDI_send_create_desc.clock_video = false;
+    NDI_send_create_desc.clock_audio = true;
     auto send = NDIlib_send_create(&NDI_send_create_desc);
     ndi_sends_.insert(std::make_pair(stream->id(), send));
   }
@@ -54,7 +57,7 @@ void NDIPublisher::VideoReceiver::RemoveTrack(
 
 NDIPublisher::VideoReceiver::Sink::Sink(webrtc::VideoTrackInterface* track,
                                         NDIlib_send_instance_t send)
-    : track_(track), pNDI_send_(send) {
+    : track_(track), pNDI_send_(send), width_(0), height_(0), buffer_index_(0) {
   //
   track_->AddOrUpdateSink(this, rtc::VideoSinkWants());
 }
@@ -83,23 +86,40 @@ void NDIPublisher::VideoReceiver::Sink::OnFrame(
   //                     << " / " << buffer_if->DataU()
   //                     << " StrideU: " << buffer_if->StrideU()
   //                     << " DataV: " << buffer_if->DataV();
-  NDIlib_video_frame_v2_t ndi_frame;
-  std::vector<uint8_t> buffer(frame.width() * frame.height() * 3 / 2);
 
-  // 色変換してないが詰め込みなおしてくれることを期待して・・・
-  libyuv::ConvertFromI420(buffer_if->DataY(), buffer_if->StrideY(),
-                          buffer_if->DataU(), buffer_if->StrideU(),
-                          buffer_if->DataV(), buffer_if->StrideV(), &buffer[0],
-                          buffer_if->width(), buffer_if->width(),
-                          buffer_if->height(), libyuv::FOURCC_I420);
+  if (width_ != frame.width() || height_ != frame.height()) {
+    width_ = frame.width();
+    height_ = frame.height();
+    NDIlib_send_send_video_async_v2(pNDI_send_, NULL);
+    buffers_[0].resize(width_ * height_ * 2);
+    buffers_[1].resize(width_ * height_ * 2);
+  }
+
+  NDIlib_video_frame_v2_t ndi_frame;
+  std::vector<uint8_t> buffer(frame.width() * frame.height() * 2);
+
+  // UYVYがネイティブ形式らしい
+  libyuv::ConvertFromI420(
+      buffer_if->DataY(), buffer_if->StrideY(), buffer_if->DataU(),
+      buffer_if->StrideU(), buffer_if->DataV(), buffer_if->StrideV(),
+      &buffers_[buffer_index_][0], buffer_if->width() * 2, buffer_if->width(),
+      buffer_if->height(), libyuv::FOURCC_UYVY);
 
   ndi_frame.xres = frame.width();
   ndi_frame.yres = frame.height();
-  ndi_frame.FourCC = NDIlib_FourCC_video_type_I420;
+  ndi_frame.FourCC = NDIlib_FourCC_video_type_UYVY;
+  ndi_frame.timestamp = frame.timestamp_us() * 10;
 
-  ndi_frame.p_data = &buffer[0];
-  NDIlib_send_send_video_v2(pNDI_send_, &ndi_frame);
-  // RTC_LOG(LS_WARNING) << "OnFrame done." << (pNDI_send_ ? "NOT NULL" : "NULL");
+  ndi_frame.p_data = &buffers_[buffer_index_][0];
+
+  auto start = std::chrono::high_resolution_clock::now();
+  NDIlib_send_send_video_async_v2(pNDI_send_, &ndi_frame);
+  auto stop = std::chrono::high_resolution_clock::now();
+  // RTC_LOG(LS_WARNING) << "OnFrame done. "
+  //                     << std::chrono::duration_cast<std::chrono::microseconds>(
+  //                            stop - start)
+  //                            .count();
+  buffer_index_ ^= 0x1;
 }
 
 void NDIPublisher::AudioReceiver::AddTrack(

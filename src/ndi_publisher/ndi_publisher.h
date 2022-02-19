@@ -60,7 +60,11 @@ class NDIPublisher : public StreamReceiver {
 
      private:
       rtc::scoped_refptr<webrtc::VideoTrackInterface> track_;
+      int width_;
+      int height_;
       NDIlib_send_instance_t pNDI_send_;
+      int buffer_index_;
+      std::vector<uint8_t> buffers_[2];
     };
 
    private:
