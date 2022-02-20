@@ -180,7 +180,7 @@ int main(int argc, char* argv[]) {
   if (args.use_sdl) {
     sdl_renderer.reset(new SDLRenderer(args.window_width, args.window_height,
                                        args.fullscreen));
-    rtc_manager->AddVideoReceiver(sdl_renderer.get());
+    sdl_renderer->SetupReceiver(rtc_manager.get());
   }
 #endif
 
