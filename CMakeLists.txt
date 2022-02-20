@@ -328,13 +328,24 @@ endif()
 # set(hisui_BINARY_DIR "${BINARY_DIR}")
 
 include(FetchContent)
+
+FetchContent_Declare(
+  fmt
+  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+  GIT_TAG 8.0.1
+)
+FetchContent_Declare(
+  spdlog
+  GIT_REPOSITORY https://github.com/gabime/spdlog.git
+  GIT_TAG v1.9.2
+)
 FetchContent_Declare(
   hisui
   GIT_REPOSITORY https://github.com/kounoike/hisui.git
   GIT_TAG cmake-only
   GIT_SUBMODULES_RECURSE TRUE
 )
-FetchContent_MakeAvailable(hisui)
+FetchContent_MakeAvailable(fmt spdlog hisui)
 
 add_executable(momo)
 add_dependencies(momo hisuilib)
@@ -390,8 +401,6 @@ target_link_directories(momo
   
   ${hisui_BINARY_DIR}/libvpx-prefix/src/libvpx-build
   ${hisui_BINARY_DIR}/_deps/libwebm-build
-  ${hisui_BINARY_DIR}/_deps/fmt-build
-  ${hisui_BINARY_DIR}/_deps/spdlog-build
 )
 
 target_link_libraries(momo
@@ -403,9 +412,8 @@ target_link_libraries(momo
     hisuilib
     vpx
     webm
-    fmt
-    spdlog
     shiguredo-mp4
+    spdlog::spdlog
 )
 
 target_compile_definitions(momo
@@ -469,12 +477,48 @@ if (USE_LIBCXX)
     PRIVATE
       "$<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>"
       "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<BOOL:LIBCXX_INCLUDE_DIR>>:-isystem${LIBCXX_INCLUDE_DIR}>"
-  )
-  target_compile_options(hisuilib
+    )
+    target_compile_options(hisuilib
     PUBLIC
       "$<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>"
       "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<BOOL:LIBCXX_INCLUDE_DIR>>:-isystem${LIBCXX_INCLUDE_DIR}>"
-  )
+    )
+  target_compile_definitions(hisuilib PRIVATE _LIBCPP_ABI_UNSTABLE _LIBCPP_DISABLE_AVAILABILITY)
+  target_compile_options(shiguredo-mp4
+    PRIVATE
+      "$<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>"
+      "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<BOOL:LIBCXX_INCLUDE_DIR>>:-isystem${LIBCXX_INCLUDE_DIR}>"
+    )
+  target_compile_definitions(shiguredo-mp4 PRIVATE _LIBCPP_ABI_UNSTABLE _LIBCPP_DISABLE_AVAILABILITY)
+  target_compile_options(fmt
+  PUBLIC
+      "$<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>"
+      "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<BOOL:LIBCXX_INCLUDE_DIR>>:-isystem${LIBCXX_INCLUDE_DIR}>"
+    )
+  set_target_properties(fmt PROPERTIES CXX_STANDARD 20 C_STANDARD 11)
+
+  target_compile_options(spdlog
+  PUBLIC
+      "$<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>"
+      "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<BOOL:LIBCXX_INCLUDE_DIR>>:-isystem${LIBCXX_INCLUDE_DIR}>"
+    )
+  target_compile_definitions(spdlog PRIVATE _LIBCPP_ABI_UNSTABLE _LIBCPP_DISABLE_AVAILABILITY)
+  set_target_properties(spdlog PROPERTIES CXX_STANDARD 20 C_STANDARD 11)
+  target_compile_options(webm
+  PUBLIC
+      "$<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>"
+      "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<BOOL:LIBCXX_INCLUDE_DIR>>:-isystem${LIBCXX_INCLUDE_DIR}>"
+    )
+  target_compile_definitions(webm PRIVATE _LIBCPP_ABI_UNSTABLE _LIBCPP_DISABLE_AVAILABILITY)
+  set_target_properties(webm PROPERTIES CXX_STANDARD 20 C_STANDARD 11)
+  target_compile_options(mkvmuxer
+    PUBLIC
+      "$<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>"
+      "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<BOOL:LIBCXX_INCLUDE_DIR>>:-isystem${LIBCXX_INCLUDE_DIR}>"
+    )
+  target_compile_definitions(mkvmuxer PRIVATE _LIBCPP_ABI_UNSTABLE _LIBCPP_DISABLE_AVAILABILITY)
+  set_target_properties(mkvmuxer PROPERTIES CXX_STANDARD 20 C_STANDARD 11)
+
 endif()
 
 if (USE_SCREEN_CAPTURER)

@@ -136,5 +136,4 @@ RUN set -ex \
   && apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get -y install cuda=$CUDA_VERSION clang-10
 
-RUN apt-get install -y g++-10
 RUN apt-get install yasm
