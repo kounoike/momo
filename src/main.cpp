@@ -40,6 +40,7 @@
 #include "sora/sora_client.h"
 #include "sora/sora_server.h"
 #include "util.h"
+#include "composed_recorder/composed_recorder.h"
 
 #ifdef _WIN32
 #include <rtc_base/win/scoped_com_initializer.h>
@@ -183,6 +184,10 @@ int main(int argc, char* argv[]) {
     rtc_manager->AddVideoReceiver(sdl_renderer.get());
   }
 #endif
+    // TODO: args
+    ComposedRecorder composed_recorder;
+    rtc_manager->AddVideoReceiver(&composed_recorder.GetVideoRecorder());
+    rtc_manager->AddAudioReceiver(&composed_recorder.GetAudioRecorder());
 
   {
     boost::asio::io_context ioc{1};

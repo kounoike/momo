@@ -11,7 +11,9 @@ dpkg-reconfigure -f noninteractive tzdata
 # libtinfo5 は Ubuntu 20.04 のために入れたが将来的に不要になる可能性がある
 apt-get -y install \
   build-essential \
+  clang-10 \
   curl \
+  g++-10 \
   git \
   libasound2-dev \
   libc6-dev \
@@ -29,4 +31,5 @@ apt-get -y install \
   rsync \
   sudo \
   vim \
-  wget
+  wget \
+  yasm

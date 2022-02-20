@@ -105,7 +105,7 @@ if [ "$MOUNT_TYPE" = "mount" ]; then
         if [ -n \"$VERBOSE\" ]; then
           export VERBOSE=$VERBOSE
         fi
-        cmake --build . -j\$(nproc)
+        cmake --build . -j\$(nproc) || cmake --build .
       popd
     "
 else

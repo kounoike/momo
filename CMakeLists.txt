@@ -311,28 +311,44 @@ if (USE_SDL2)
   find_package(SDL2 REQUIRED)
 endif()
 
-include(ExternalProject)
-ExternalProject_Add(
+# include(ExternalProject)
+# ExternalProject_Add(
+#   hisui
+#   GIT_REPOSITORY https://github.com/kounoike/hisui.git
+#   GIT_TAG cmake-only
+#   GIT_SUBMODULES_RECURSE TRUE
+#   CONFIGURE_COMMAND cmake -E env cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} ../hisui
+#   BUILD_COMMAND cmake -E env cmake --build . -j $(nproc)
+#   # INSTALL_COMMAND cmake -E env cmake --install . --prefix ${CMAKE_CURRENT_BINARY_DIR}/install
+#   INSTALL_COMMAND ""
+#   EXCLUDE_FROM_ALL TRUE
+# )
+# ExternalProject_Get_Property(hisui SOURCE_DIR BINARY_DIR)
+# set(hisui_SOURCE_DIR "${SOURCE_DIR}")
+# set(hisui_BINARY_DIR "${BINARY_DIR}")
+
+include(FetchContent)
+FetchContent_Declare(
   hisui
   GIT_REPOSITORY https://github.com/kounoike/hisui.git
   GIT_TAG cmake-only
   GIT_SUBMODULES_RECURSE TRUE
-  CONFIGURE_COMMAND cmake -E env cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/root/llvm/clang/bin/clang -DCMAKE_CXX_COMPILER=/root/llvm/clang/bin/clang++ ../hisui
-  BUILD_COMMAND cmake -E env cmake --build . -j $(nproc)
-  # INSTALL_COMMAND cmake -E env cmake --install . --prefix ${CMAKE_CURRENT_BINARY_DIR}/install
-  INSTALL_COMMAND ""
-  EXCLUDE_FROM_ALL TRUE
 )
-ExternalProject_Get_Property(hisui BINARY_DIR)
-set(hisui_BINARYE_DIR "${BINARY_DIR}")
+FetchContent_MakeAvailable(hisui)
 
 add_executable(momo)
-add_dependencies(momo hisui)
+add_dependencies(momo hisuilib)
 
 string(SUBSTRING "${MOMO_COMMIT}" 0 8 MOMO_COMMIT_SHORT)
 string(SUBSTRING "${WEBRTC_COMMIT}" 0 8 WEBRTC_COMMIT_SHORT)
 configure_file(src/momo_version.gen.h.template ${CMAKE_CURRENT_BINARY_DIR}/momo_version.gen.h)
-target_include_directories(momo PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(momo PRIVATE
+  ${CMAKE_CURRENT_BINARY_DIR}
+  ${hisui_SOURCE_DIR}/src
+  ${hisui_BINARY_DIR}/install/include
+  ${hisui_BINARY_DIR}/_deps/spdlog-src/include
+)
+
 
 target_sources(momo
   PRIVATE
@@ -362,11 +378,21 @@ target_sources(momo
     src/websocket.cpp
     src/metrics/metrics_server.cpp
     src/metrics/metrics_session.cpp
+    src/composed_recorder/composed_recorder.cpp
 )
 
 target_include_directories(momo PRIVATE src)
 
-set_target_properties(momo PROPERTIES CXX_STANDARD 17 C_STANDARD 99)
+set_target_properties(momo PROPERTIES CXX_STANDARD 20 C_STANDARD 11)
+
+target_link_directories(momo
+  PRIVATE
+  
+  ${hisui_BINARY_DIR}/libvpx-prefix/src/libvpx-build
+  ${hisui_BINARY_DIR}/_deps/libwebm-build
+  ${hisui_BINARY_DIR}/_deps/fmt-build
+  ${hisui_BINARY_DIR}/_deps/spdlog-build
+)
 
 target_link_libraries(momo
   PRIVATE
@@ -374,7 +400,12 @@ target_link_libraries(momo
     Boost::filesystem
     Boost::json
     CLI11::CLI11
-    ${hisui_BINARYE_DIR}/libhisui.a
+    hisuilib
+    vpx
+    webm
+    fmt
+    spdlog
+    shiguredo-mp4
 )
 
 target_compile_definitions(momo
@@ -436,6 +467,11 @@ endif()
 if (USE_LIBCXX)
   target_compile_options(momo
     PRIVATE
+      "$<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>"
+      "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<BOOL:LIBCXX_INCLUDE_DIR>>:-isystem${LIBCXX_INCLUDE_DIR}>"
+  )
+  target_compile_options(hisuilib
+    PUBLIC
       "$<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>"
       "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<BOOL:LIBCXX_INCLUDE_DIR>>:-isystem${LIBCXX_INCLUDE_DIR}>"
   )
