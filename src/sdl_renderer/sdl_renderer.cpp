@@ -8,13 +8,27 @@
 #include <rtc_base/logging.h>
 #include <third_party/libyuv/include/libyuv/convert_from.h>
 #include <third_party/libyuv/include/libyuv/video_common.h>
+#include <third_party/libyuv/include/libyuv/planar_functions.h>
 
 #define STD_ASPECT 1.33
 #define WIDE_ASPECT 1.78
 #define FRAME_INTERVAL (1000 / 30)
 
-SDLRenderer::SDLRenderer(int width, int height, bool fullscreen)
-    : running_(true),
+void SDLRenderer::SetupReceiver(RTCManager* rtc_manager) {
+  rtc_manager->AddVideoReceiver(&video_receiver_);
+  rtc_manager->AddAudioReceiver(&audio_receiver_);
+}
+
+void SDLRenderer::SetDispatchFunction(
+    std::function<void(std::function<void()>)> dispatch) {
+  video_receiver_.SetDispatchFunction(dispatch);
+}
+
+SDLRenderer::VideoReceiver::VideoReceiver(int width,
+                                          int height,
+                                          bool fullscreen, AudioReceiver& audio_receiver)
+    : audio_receiver_(audio_receiver),
+      running_(true),
       window_(nullptr),
       renderer_(nullptr),
       dispatch_(nullptr),
@@ -52,10 +66,10 @@ SDLRenderer::SDLRenderer(int width, int height, bool fullscreen)
   }
 #endif
 
-  thread_ = SDL_CreateThread(SDLRenderer::RenderThreadExec, "Render", this);
+  thread_ = SDL_CreateThread(VideoReceiver::RenderThreadExec, "Render", this);
 }
 
-SDLRenderer::~SDLRenderer() {
+SDLRenderer::VideoReceiver::~VideoReceiver() {
   running_ = false;
   int ret = 0;
   SDL_WaitThread(thread_, &ret);
@@ -71,17 +85,17 @@ SDLRenderer::~SDLRenderer() {
   SDL_Quit();
 }
 
-bool SDLRenderer::IsFullScreen() {
+bool SDLRenderer::VideoReceiver::IsFullScreen() {
   return SDL_GetWindowFlags(window_) & SDL_WINDOW_FULLSCREEN_DESKTOP;
 }
 
-void SDLRenderer::SetFullScreen(bool fullscreen) {
+void SDLRenderer::VideoReceiver::SetFullScreen(bool fullscreen) {
   SDL_SetWindowFullscreen(window_,
                           fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
   SDL_ShowCursor(fullscreen ? SDL_DISABLE : SDL_ENABLE);
 }
 
-void SDLRenderer::PollEvent() {
+void SDLRenderer::VideoReceiver::PollEvent() {
   SDL_Event e;
   // 必ずメインスレッドから呼び出す
   while (SDL_PollEvent(&e) > 0) {
@@ -109,17 +123,17 @@ void SDLRenderer::PollEvent() {
   }
 }
 
-void SDLRenderer::SetDispatchFunction(
+void SDLRenderer::VideoReceiver::SetDispatchFunction(
     std::function<void(std::function<void()>)> dispatch) {
   webrtc::MutexLock lock(&sinks_lock_);
   dispatch_ = std::move(dispatch);
 }
 
-int SDLRenderer::RenderThreadExec(void* data) {
-  return ((SDLRenderer*)data)->RenderThread();
+int SDLRenderer::VideoReceiver::RenderThreadExec(void* data) {
+  return ((VideoReceiver*)data)->RenderThread();
 }
 
-int SDLRenderer::RenderThread() {
+int SDLRenderer::VideoReceiver::RenderThread() {
 #if !defined(__APPLE__)
   renderer_ = SDL_CreateRenderer(window_, -1, SDL_RENDERER_ACCELERATED);
   if (renderer_ == nullptr) {
@@ -169,7 +183,7 @@ int SDLRenderer::RenderThread() {
       SDL_RenderPresent(renderer_);
 
       if (dispatch_) {
-        dispatch_(std::bind(&SDLRenderer::PollEvent, this));
+        dispatch_(std::bind(&VideoReceiver::PollEvent, this));
       }
     }
     duration = SDL_GetTicks() - start_time;
@@ -182,8 +196,8 @@ int SDLRenderer::RenderThread() {
   return 0;
 }
 
-SDLRenderer::Sink::Sink(SDLRenderer* renderer,
-                        webrtc::VideoTrackInterface* track)
+SDLRenderer::VideoReceiver::Sink::Sink(VideoReceiver* renderer,
+                                       webrtc::VideoTrackInterface* track)
     : renderer_(renderer),
       track_(track),
       outline_offset_x_(0),
@@ -199,11 +213,12 @@ SDLRenderer::Sink::Sink(SDLRenderer* renderer,
   track_->AddOrUpdateSink(this, rtc::VideoSinkWants());
 }
 
-SDLRenderer::Sink::~Sink() {
+SDLRenderer::VideoReceiver::Sink::~Sink() {
   track_->RemoveSink(this);
 }
 
-void SDLRenderer::Sink::OnFrame(const webrtc::VideoFrame& frame) {
+void SDLRenderer::VideoReceiver::Sink::OnFrame(
+    const webrtc::VideoFrame& frame) {
   if (outline_width_ == 0 || outline_height_ == 0)
     return;
   if (frame.width() == 0 || frame.height() == 0)
@@ -249,14 +264,29 @@ void SDLRenderer::Sink::OnFrame(const webrtc::VideoFrame& frame) {
   } else {
     buffer_if = frame.video_frame_buffer()->ToI420();
   }
+  int dst_stride = (scaled_ ? width_ : input_width_) * 4;
   libyuv::ConvertFromI420(
       buffer_if->DataY(), buffer_if->StrideY(), buffer_if->DataU(),
       buffer_if->StrideU(), buffer_if->DataV(), buffer_if->StrideV(),
-      image_.get(), (scaled_ ? width_ : input_width_) * 4, buffer_if->width(),
+      image_.get(), dst_stride, buffer_if->width(),
       buffer_if->height(), libyuv::FOURCC_ARGB);
+
+  // ボリュームメータ
+  double volume = renderer_->GetVolumeAndReset();
+
+  uint32_t volume_color = 0x007FC9FF; // 色は適当
+  int rect_w = 40; // 適当に 40pxくらい？
+  int rect_h = (scaled_ ? height_ : input_height_) * volume;
+  int dst_x = (scaled_ ? width_ : input_width_) - rect_w;
+  int dst_y = (scaled_ ? height_ : input_height_) - rect_h;
+  libyuv::ARGBRect(image_.get(), dst_stride, dst_x, dst_y, rect_w, rect_h, volume_color);
+
 }
 
-void SDLRenderer::Sink::SetOutlineRect(int x, int y, int width, int height) {
+void SDLRenderer::VideoReceiver::Sink::SetOutlineRect(int x,
+                                                      int y,
+                                                      int width,
+                                                      int height) {
   outline_offset_x_ = x;
   outline_offset_y_ = y;
   if (outline_width_ == width && outline_height_ == height) {
@@ -271,43 +301,43 @@ void SDLRenderer::Sink::SetOutlineRect(int x, int y, int width, int height) {
   outline_changed_ = true;
 }
 
-webrtc::Mutex* SDLRenderer::Sink::GetMutex() {
+webrtc::Mutex* SDLRenderer::VideoReceiver::Sink::GetMutex() {
   return &frame_params_lock_;
 }
 
-bool SDLRenderer::Sink::GetOutlineChanged() {
+bool SDLRenderer::VideoReceiver::Sink::GetOutlineChanged() {
   return !outline_changed_;
 }
 
-int SDLRenderer::Sink::GetOffsetX() {
+int SDLRenderer::VideoReceiver::Sink::GetOffsetX() {
   return outline_offset_x_ + offset_x_;
 }
 
-int SDLRenderer::Sink::GetOffsetY() {
+int SDLRenderer::VideoReceiver::Sink::GetOffsetY() {
   return outline_offset_y_ + offset_y_;
 }
 
-int SDLRenderer::Sink::GetFrameWidth() {
+int SDLRenderer::VideoReceiver::Sink::GetFrameWidth() {
   return scaled_ ? width_ : input_width_;
 }
 
-int SDLRenderer::Sink::GetFrameHeight() {
+int SDLRenderer::VideoReceiver::Sink::GetFrameHeight() {
   return scaled_ ? height_ : input_height_;
 }
 
-int SDLRenderer::Sink::GetWidth() {
+int SDLRenderer::VideoReceiver::Sink::GetWidth() {
   return width_;
 }
 
-int SDLRenderer::Sink::GetHeight() {
+int SDLRenderer::VideoReceiver::Sink::GetHeight() {
   return height_;
 }
 
-uint8_t* SDLRenderer::Sink::GetImage() {
+uint8_t* SDLRenderer::VideoReceiver::Sink::GetImage() {
   return image_.get();
 }
 
-void SDLRenderer::SetOutlines() {
+void SDLRenderer::VideoReceiver::SetOutlines() {
   float window_aspect = (float)width_ / (float)height_;
   bool window_is_wide = window_aspect > ((STD_ASPECT + WIDE_ASPECT) / 2.0);
   float frame_aspect = window_is_wide ? WIDE_ASPECT : STD_ASPECT;
@@ -354,14 +384,15 @@ void SDLRenderer::SetOutlines() {
   cols_ = cols;
 }
 
-void SDLRenderer::AddTrack(webrtc::VideoTrackInterface* track) {
+void SDLRenderer::VideoReceiver::AddTrack(webrtc::VideoTrackInterface* track, webrtc::MediaStreamInterface* stream) {
   std::unique_ptr<Sink> sink(new Sink(this, track));
   webrtc::MutexLock lock(&sinks_lock_);
   sinks_.push_back(std::make_pair(track, std::move(sink)));
   SetOutlines();
 }
 
-void SDLRenderer::RemoveTrack(webrtc::VideoTrackInterface* track) {
+void SDLRenderer::VideoReceiver::RemoveTrack(
+    webrtc::VideoTrackInterface* track) {
   webrtc::MutexLock lock(&sinks_lock_);
   sinks_.erase(
       std::remove_if(sinks_.begin(), sinks_.end(),
@@ -370,4 +401,67 @@ void SDLRenderer::RemoveTrack(webrtc::VideoTrackInterface* track) {
                      }),
       sinks_.end());
   SetOutlines();
+}
+
+void SDLRenderer::AudioReceiver::AddTrack(webrtc::AudioTrackInterface* track, webrtc::MediaStreamInterface* stream) {
+  std::unique_ptr<Sink> sink(new Sink(track));
+  webrtc::MutexLock lock(&sinks_lock_);
+  sinks_.push_back(std::make_pair(track, std::move(sink)));
+}
+
+void SDLRenderer::AudioReceiver::RemoveTrack(
+    webrtc::AudioTrackInterface* track) {
+  webrtc::MutexLock lock(&sinks_lock_);
+  sinks_.erase(
+      std::remove_if(sinks_.begin(), sinks_.end(),
+                     [track](const AudioTrackSinkVector::value_type& sink) {
+                       return sink.first == track;
+                     }),
+      sinks_.end());
+}
+
+double SDLRenderer::AudioReceiver::GetVolumeAndReset(webrtc::AudioTrackInterface* track) {
+  auto it = std::find_if(sinks_.begin(), sinks_.end(), [track](const AudioTrackSinkVector::value_type& pair) {
+    return pair.first == track;
+  });
+  if (it != sinks_.end()) {
+    double volume = it->second->GetVolume();
+    it->second->ResetVolumeCalculation();
+    return volume;
+  } else {
+    return 0.0; // 0.0? NaN?
+  }
+}
+
+SDLRenderer::AudioReceiver::Sink::Sink(webrtc::AudioTrackInterface* track)
+    : track_(track), sum_of_square_(0.0), count_(0) {
+  track_->AddSink(this);
+}
+
+SDLRenderer::AudioReceiver::Sink::~Sink() {
+  track_->RemoveSink(this);
+}
+
+void SDLRenderer::AudioReceiver::Sink::OnData(
+    const void* audio_data,
+    int bits_per_sample,
+    int sample_rate,
+    size_t number_of_channels,
+    size_t number_of_frames,
+    absl::optional<int64_t> absolute_capture_timestamp_ms) {
+  // monoral 前提
+  const int16_t* p = reinterpret_cast<const int16_t*>(audio_data);
+  for (int i = 0; i < number_of_frames; i++) {
+    double val = p[i] / 32768.0;
+    sum_of_square_ += val * val;
+  }
+}
+
+double SDLRenderer::AudioReceiver::Sink::GetVolume() {
+  // とりあえず RMS をそのまま返す
+  return sqrt(sum_of_square_ / count_);
+}
+void SDLRenderer::AudioReceiver::Sink::ResetVolumeCalculation() {
+  count_ = 0;
+  sum_of_square_ += 0.0;
 }
