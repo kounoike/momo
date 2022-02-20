@@ -197,9 +197,10 @@ int SDLRenderer::VideoReceiver::RenderThread() {
 }
 
 SDLRenderer::VideoReceiver::Sink::Sink(VideoReceiver* renderer,
-                                       webrtc::VideoTrackInterface* track)
+                                       webrtc::VideoTrackInterface* track, webrtc::MediaStreamInterface* stream)
     : renderer_(renderer),
       track_(track),
+      stream_(stream),
       outline_offset_x_(0),
       outline_offset_y_(0),
       outline_width_(0),
@@ -272,7 +273,7 @@ void SDLRenderer::VideoReceiver::Sink::OnFrame(
       buffer_if->height(), libyuv::FOURCC_ARGB);
 
   // ボリュームメータ
-  double volume = renderer_->GetVolumeAndReset();
+  double volume = renderer_->GetVolumeAndReset(stream_);
 
   uint32_t volume_color = 0x007FC9FF; // 色は適当
   int rect_w = 40; // 適当に 40pxくらい？
@@ -385,8 +386,9 @@ void SDLRenderer::VideoReceiver::SetOutlines() {
 }
 
 void SDLRenderer::VideoReceiver::AddTrack(webrtc::VideoTrackInterface* track, webrtc::MediaStreamInterface* stream) {
-  std::unique_ptr<Sink> sink(new Sink(this, track));
+  std::unique_ptr<Sink> sink(new Sink(this, track, stream));
   webrtc::MutexLock lock(&sinks_lock_);
+  sink_map_.insert(std::make_pair(stream, sink.get()));
   sinks_.push_back(std::make_pair(track, std::move(sink)));
   SetOutlines();
 }
@@ -420,17 +422,8 @@ void SDLRenderer::AudioReceiver::RemoveTrack(
       sinks_.end());
 }
 
-double SDLRenderer::AudioReceiver::GetVolumeAndReset(webrtc::AudioTrackInterface* track) {
-  auto it = std::find_if(sinks_.begin(), sinks_.end(), [track](const AudioTrackSinkVector::value_type& pair) {
-    return pair.first == track;
-  });
-  if (it != sinks_.end()) {
-    double volume = it->second->GetVolume();
-    it->second->ResetVolumeCalculation();
-    return volume;
-  } else {
-    return 0.0; // 0.0? NaN?
-  }
+double SDLRenderer::AudioReceiver::GetVolumeAndReset(webrtc::MediaStreamInterface* stream) {
+  return 0.5; // 0.0? NaN?
 }
 
 SDLRenderer::AudioReceiver::Sink::Sink(webrtc::AudioTrackInterface* track)

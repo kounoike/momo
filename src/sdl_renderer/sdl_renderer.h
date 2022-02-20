@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <map>
 
 // SDL
 #include <SDL.h>
@@ -36,7 +37,7 @@ class SDLRenderer {
     AudioReceiver(){};
     ~AudioReceiver(){};
 
-    double GetVolumeAndReset(webrtc::AudioTrackInterface* track);
+    double GetVolumeAndReset(webrtc::MediaStreamInterface* stream);
 
     void AddTrack(webrtc::AudioTrackInterface* track) override{};
     void AddTrack(webrtc::AudioTrackInterface* track,
@@ -81,7 +82,7 @@ class SDLRenderer {
                   AudioReceiver& audio_receiver);
     ~VideoReceiver();
 
-    double GetVolumeAndReset() { return audio_receiver_.GetVolumeAndReset(track); }
+    double GetVolumeAndReset(webrtc::MediaStreamInterface* stream) { return audio_receiver_.GetVolumeAndReset(stream); }
 
     void SetDispatchFunction(
         std::function<void(std::function<void()>)> dispatch);
@@ -98,7 +99,7 @@ class SDLRenderer {
    protected:
     class Sink : public rtc::VideoSinkInterface<webrtc::VideoFrame> {
      public:
-      Sink(VideoReceiver* renderer, webrtc::VideoTrackInterface* track);
+      Sink(VideoReceiver* renderer, webrtc::VideoTrackInterface* track, webrtc::MediaStreamInterface* stream);
       ~Sink();
 
       void OnFrame(const webrtc::VideoFrame& frame) override;
@@ -118,6 +119,7 @@ class SDLRenderer {
      private:
       VideoReceiver* renderer_;
       rtc::scoped_refptr<webrtc::VideoTrackInterface> track_;
+      rtc::scoped_refptr<webrtc::MediaStreamInterface> stream_;
       webrtc::Mutex frame_params_lock_;
       int outline_offset_x_;
       int outline_offset_y_;
@@ -146,6 +148,8 @@ class SDLRenderer {
         std::pair<webrtc::VideoTrackInterface*, std::unique_ptr<Sink> > >
         VideoTrackSinkVector;
     VideoTrackSinkVector sinks_;
+    typedef std::map<webrtc::MediaStreamInterface *, Sink *> StreamSinkMap;
+    StreamSinkMap sink_map_;
     std::atomic<bool> running_;
     SDL_Thread* thread_;
     SDL_Window* window_;
