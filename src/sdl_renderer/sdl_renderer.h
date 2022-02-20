@@ -64,6 +64,7 @@ class SDLRenderer {
       webrtc::AudioTrackInterface* track_;
       int count_;
       double sum_of_square_;
+      webrtc::Mutex volume_data_mtx_;
     };
 
    private:
@@ -72,6 +73,8 @@ class SDLRenderer {
         std::pair<webrtc::AudioTrackInterface*, std::unique_ptr<Sink> > >
         AudioTrackSinkVector;
     AudioTrackSinkVector sinks_;
+    typedef std::map<webrtc::MediaStreamInterface *, Sink *> StreamSinkMap;
+    StreamSinkMap sink_map_;
   };
 
   class VideoReceiver : public VideoTrackReceiver {
@@ -148,8 +151,6 @@ class SDLRenderer {
         std::pair<webrtc::VideoTrackInterface*, std::unique_ptr<Sink> > >
         VideoTrackSinkVector;
     VideoTrackSinkVector sinks_;
-    typedef std::map<webrtc::MediaStreamInterface *, Sink *> StreamSinkMap;
-    StreamSinkMap sink_map_;
     std::atomic<bool> running_;
     SDL_Thread* thread_;
     SDL_Window* window_;

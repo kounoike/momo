@@ -265,7 +265,9 @@ void SDLRenderer::VideoReceiver::Sink::OnFrame(
   } else {
     buffer_if = frame.video_frame_buffer()->ToI420();
   }
-  int dst_stride = (scaled_ ? width_ : input_width_) * 4;
+  int width = (scaled_ ? width_ : input_width_);
+  int height = (scaled_ ? height_ : input_height_);
+  int dst_stride = width * 4;
   libyuv::ConvertFromI420(
       buffer_if->DataY(), buffer_if->StrideY(), buffer_if->DataU(),
       buffer_if->StrideU(), buffer_if->DataV(), buffer_if->StrideV(),
@@ -276,10 +278,10 @@ void SDLRenderer::VideoReceiver::Sink::OnFrame(
   double volume = renderer_->GetVolumeAndReset(stream_);
 
   uint32_t volume_color = 0x007FC9FF; // 色は適当
-  int rect_w = 40; // 適当に 40pxくらい？
-  int rect_h = (scaled_ ? height_ : input_height_) * volume;
-  int dst_x = (scaled_ ? width_ : input_width_) - rect_w;
-  int dst_y = (scaled_ ? height_ : input_height_) - rect_h;
+  int rect_w = width / 20; // 適当に 5% くらい？
+  int rect_h = height * volume;
+  int dst_x = width - rect_w - 1;
+  int dst_y = height - rect_h - 1;
   libyuv::ARGBRect(image_.get(), dst_stride, dst_x, dst_y, rect_w, rect_h, volume_color);
 
 }
@@ -388,7 +390,6 @@ void SDLRenderer::VideoReceiver::SetOutlines() {
 void SDLRenderer::VideoReceiver::AddTrack(webrtc::VideoTrackInterface* track, webrtc::MediaStreamInterface* stream) {
   std::unique_ptr<Sink> sink(new Sink(this, track, stream));
   webrtc::MutexLock lock(&sinks_lock_);
-  sink_map_.insert(std::make_pair(stream, sink.get()));
   sinks_.push_back(std::make_pair(track, std::move(sink)));
   SetOutlines();
 }
@@ -408,6 +409,7 @@ void SDLRenderer::VideoReceiver::RemoveTrack(
 void SDLRenderer::AudioReceiver::AddTrack(webrtc::AudioTrackInterface* track, webrtc::MediaStreamInterface* stream) {
   std::unique_ptr<Sink> sink(new Sink(track));
   webrtc::MutexLock lock(&sinks_lock_);
+  sink_map_.insert(std::make_pair(stream, sink.get()));
   sinks_.push_back(std::make_pair(track, std::move(sink)));
 }
 
@@ -423,7 +425,10 @@ void SDLRenderer::AudioReceiver::RemoveTrack(
 }
 
 double SDLRenderer::AudioReceiver::GetVolumeAndReset(webrtc::MediaStreamInterface* stream) {
-  return 0.5; // 0.0? NaN?
+  auto sink = sink_map_[stream];
+  double volume = sink->GetVolume();
+  sink->ResetVolumeCalculation();
+  return volume;
 }
 
 SDLRenderer::AudioReceiver::Sink::Sink(webrtc::AudioTrackInterface* track)
@@ -444,17 +449,41 @@ void SDLRenderer::AudioReceiver::Sink::OnData(
     absl::optional<int64_t> absolute_capture_timestamp_ms) {
   // monoral 前提
   const int16_t* p = reinterpret_cast<const int16_t*>(audio_data);
+
+  double sum = 0.0;
   for (int i = 0; i < number_of_frames; i++) {
     double val = p[i] / 32768.0;
-    sum_of_square_ += val * val;
+    sum += val * val;
+  }
+  {
+    webrtc::MutexLock lock(&volume_data_mtx_);
+    sum_of_square_ += sum;
+    count_ += number_of_frames;
   }
 }
 
 double SDLRenderer::AudioReceiver::Sink::GetVolume() {
   // とりあえず RMS をそのまま返す
-  return sqrt(sum_of_square_ / count_);
+  webrtc::MutexLock lock(&volume_data_mtx_);
+  // 0除算除け
+  if (count_ == 0) {
+    return 0.0;
+  }
+  double rms = sqrt(sum_of_square_ / count_);
+  double ref = 1.0 / sqrt(2.0);
+  double volume_db = 20 * log10(rms / ref);
+  double volume_level = (volume_db + 60.0) / 60.0;
+  if (volume_level > 1.0 - 1e-10) {
+    volume_level = 1.0;
+  }
+  if (volume_level < 1e-10) {
+    volume_level = 0.0;
+  }
+  RTC_LOG(LS_WARNING) << "volume db " << volume_db << " level " << volume_level << " sos " << sum_of_square_ << " count " << count_ ;
+  return volume_level;
 }
 void SDLRenderer::AudioReceiver::Sink::ResetVolumeCalculation() {
+  webrtc::MutexLock lock(&volume_data_mtx_);
   count_ = 0;
-  sum_of_square_ += 0.0;
+  sum_of_square_ = 0.0;
 }

@@ -19,7 +19,7 @@ class PeerConnectionObserver : public webrtc::PeerConnectionObserver {
                          std::vector<VideoTrackReceiver*>& video_receivers,
                          std::vector<AudioTrackReceiver*>& audio_receivers,
                          RTCDataManager* data_manager)
-      : sender_(sender), data_manager_(data_manager), stream_receivers_(stream_receivers), audio_receivers_(audio_receivers), video_receivers(video_receivers) {
+      : sender_(sender), data_manager_(data_manager), stream_receivers_(stream_receivers), audio_receivers_(audio_receivers), video_receivers_(video_receivers) {
   }
   ~PeerConnectionObserver();
 
